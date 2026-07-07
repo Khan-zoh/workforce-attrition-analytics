@@ -1,0 +1,177 @@
+---
+title: "Phase 1 — Who Is Leaving? Exploratory Analysis"
+author: "Zohair Khan"
+date: "2026-07-07"
+output:
+  html_document:
+    toc: true
+    toc_float: true
+    theme: flatly
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE,
+                      fig.width = 9, fig.height = 5)
+library(tidyverse)
+library(patchwork)
+library(corrplot)
+library(scales)
+library(janitor)
+theme_set(theme_minimal(base_size = 12))
+accent <- c(No = "#8da0cb", Yes = "#e15759")
+```
+
+## Purpose
+
+Before any modeling, answer the HR director's first question plainly: **who is leaving, and which groups are leaving fastest?** Everything flagged here becomes a candidate driver for the formal hypothesis tests in Phase 2.
+
+## Data integrity
+
+```{r load}
+hr <- read_csv("data/hr-attrition.csv", show_col_types = FALSE)
+
+tibble(
+  rows = nrow(hr),
+  cols = ncol(hr),
+  missing_values = sum(is.na(hr)),
+  duplicate_employee_ids = sum(duplicated(hr$EmployeeNumber))
+)
+```
+
+The dataset is complete: no missing values, one row per employee. Three columns carry no information (`EmployeeCount`, `StandardHours`, `Over18` are constant for every row) and `EmployeeNumber` is an ID, so all four are excluded from analysis. `EmployeeNumber` is kept as the join key for the risk-score outputs in Phase 3.
+
+```{r drop-constants}
+constant_cols <- hr %>% summarise(across(everything(), n_distinct)) %>%
+  pivot_longer(everything()) %>% filter(value == 1) %>% pull(name)
+constant_cols
+
+hr <- hr %>% select(-all_of(constant_cols))
+```
+
+## Overall attrition
+
+```{r overall}
+overall <- hr %>% count(Attrition) %>% mutate(share = n / sum(n))
+overall
+
+attrition_rate <- overall %>% filter(Attrition == "Yes") %>% pull(share)
+```
+
+**`r percent(attrition_rate, accuracy = 0.1)` of the workforce left** (`r sum(hr$Attrition == "Yes")` of `r nrow(hr)` employees). At a flat replacement cost of $15K per leaver — the placeholder parameter this project carries through to the dashboard — that is roughly **$`r comma(sum(hr$Attrition == "Yes") * 15000 / 1e6, accuracy = 0.1)`M per year**.
+
+## Which groups are leaving fastest?
+
+A reusable helper: attrition rate by group, with group sizes visible so small-n groups don't get over-read.
+
+```{r rate-helper}
+rate_by <- function(df, col) {
+  df %>%
+    group_by({{ col }}) %>%
+    summarise(n = n(), leavers = sum(Attrition == "Yes"),
+              attrition_rate = leavers / n, .groups = "drop") %>%
+    arrange(desc(attrition_rate))
+}
+
+plot_rate <- function(df, col, title) {
+  d <- rate_by(df, {{ col }})
+  ggplot(d, aes(x = reorder({{ col }}, attrition_rate), y = attrition_rate)) +
+    geom_col(fill = "#e15759") +
+    geom_hline(yintercept = attrition_rate_overall, linetype = "dashed") +
+    geom_text(aes(label = paste0(percent(attrition_rate, 1), " (n=", n, ")")),
+              hjust = -0.05, size = 3.2) +
+    scale_y_continuous(labels = percent, limits = c(0, .55)) +
+    coord_flip() +
+    labs(title = title, x = NULL, y = "Attrition rate",
+         caption = "Dashed line = company-wide attrition rate")
+}
+attrition_rate_overall <- attrition_rate
+```
+
+### Overtime is the loudest single signal
+
+```{r overtime}
+plot_rate(hr, OverTime, "Employees working overtime leave at ~3x the rate of those who don't")
+```
+
+### Department and job role
+
+```{r dept-role, fig.height=7}
+p1 <- plot_rate(hr, Department, "Attrition by department")
+p2 <- plot_rate(hr, JobRole, "Attrition by job role — Sales Reps stand out")
+p1 / p2 + plot_layout(heights = c(1, 2))
+```
+
+### Travel, marital status, and work-life balance
+
+```{r travel-marital, fig.height=8}
+p3 <- plot_rate(hr, BusinessTravel, "Frequent travelers leave more often")
+p4 <- plot_rate(hr, MaritalStatus, "Single employees leave more often")
+p5 <- plot_rate(hr, WorkLifeBalance, "Attrition by self-rated work-life balance (1=worst)")
+p3 / p4 / p5
+```
+
+## Numeric drivers
+
+```{r numeric-drivers, fig.height=8}
+num_plot <- function(col, title) {
+  ggplot(hr, aes(x = Attrition, y = {{ col }}, fill = Attrition)) +
+    geom_boxplot(alpha = 0.75, outlier.alpha = 0.3) +
+    scale_fill_manual(values = accent, guide = "none") +
+    labs(title = title, x = NULL)
+}
+(num_plot(Age, "Leavers skew younger") +
+ num_plot(MonthlyIncome, "Leavers earn less")) /
+(num_plot(TotalWorkingYears, "Leavers are earlier-career") +
+ num_plot(YearsAtCompany, "Leavers have shorter tenure")) /
+(num_plot(DistanceFromHome, "Leavers commute slightly farther") +
+ num_plot(YearsSinceLastPromotion, "Time since promotion: no obvious gap"))
+```
+
+## Tenure × income: where the risk concentrates
+
+```{r banding}
+banded <- hr %>%
+  mutate(
+    tenure_band = cut(YearsAtCompany, breaks = c(-1, 1, 3, 6, 10, 50),
+                      labels = c("0-1 yr", "2-3 yrs", "4-6 yrs", "7-10 yrs", "10+ yrs")),
+    income_quartile = factor(ntile(MonthlyIncome, 4),
+                             labels = c("Q1 (lowest)", "Q2", "Q3", "Q4 (highest)"))
+  ) %>%
+  group_by(tenure_band, income_quartile) %>%
+  summarise(n = n(), attrition_rate = mean(Attrition == "Yes"), .groups = "drop")
+
+ggplot(banded, aes(income_quartile, tenure_band, fill = attrition_rate)) +
+  geom_tile(color = "white") +
+  geom_text(aes(label = paste0(percent(attrition_rate, 1), "\n(n=", n, ")")), size = 3) +
+  scale_fill_gradient(low = "#f7fbff", high = "#e15759", labels = percent) +
+  labs(title = "Attrition concentrates in low-income, early-tenure employees",
+       x = "Monthly income quartile", y = "Tenure at company", fill = "Attrition")
+```
+
+```{r save-key-figure, include=FALSE}
+ggsave("outputs/figures/eda-tenure-income-heatmap.png", width = 9, height = 5, dpi = 150)
+```
+
+## How the numeric features relate to each other
+
+Several tenure-family variables travel together — this matters later when interpreting regression coefficients (multicollinearity).
+
+```{r corr, fig.height=8, fig.width=9}
+num_vars <- hr %>% select(where(is.numeric), -EmployeeNumber)
+corrplot(cor(num_vars), method = "color", type = "lower",
+         tl.cex = 0.7, tl.col = "black", order = "hclust")
+```
+
+## What we take into Phase 2
+
+Candidate drivers, from strongest visual signal to weakest:
+
+1. **OverTime** — the standout categorical gap (~30% vs ~10%).
+2. **JobRole / Department** — Sales Representatives (~40%) and lab technicians well above the mean.
+3. **MonthlyIncome / JobLevel** — leavers earn substantially less; income and level are nearly the same variable (r ≈ 0.95).
+4. **Age / TotalWorkingYears / YearsAtCompany** — an early-career effect; the tenure family is heavily inter-correlated.
+5. **MaritalStatus (Single), BusinessTravel (Frequent)** — moderate gaps.
+6. **JobSatisfaction / EnvironmentSatisfaction / WorkLifeBalance** — visible but smaller; test formally.
+7. **DistanceFromHome** — small; **YearsSinceLastPromotion** — visually near-zero, worth testing to rule out.
+
+Phase 2 puts every one of these through a formal test with multiple-comparison correction and effect sizes, so we can separate real drivers from noise — and from "statistically significant but practically trivial."
