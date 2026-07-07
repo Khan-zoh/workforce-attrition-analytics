@@ -8,8 +8,11 @@ Three layers. **Diagnostic:** I tested 30 candidate drivers with chi-squared and
 
 ## Questions to expect
 
+**"Which model powers the watch list?"**
+The logistic regression — same model as every headline number, so the 49%-capture claim is about the exact scores on the dashboard. The extract also carries two clearly-labeled companion columns from XGBoost (`xgb_score`, and the per-employee SHAP `top_shap_driver` "risk pattern"). The division of labor is deliberate: calibrated decision score from the model that ranked better, pattern-discovery annotation from the model that explains individuals better — and the two models' driver stories agree, which is the cross-check that makes mixing them defensible.
+
 **"Why did logistic regression beat XGBoost?"**
-n≈1,200 training rows, mostly monotone/linear relationships, no strong interactions worth the variance cost. Boosting shines on large data with structure to exploit; here it just paid an overfitting penalty. Also my class re-weighting (`scale_pos_weight`) deliberately traded calibration for recall, which hurt its Brier score — the threshold-free metrics are the fair comparison, and it still lost those. The bigger point: I'd rather report the true result than tune until the fancy model wins.
+n≈1,200 training rows, mostly monotone/linear relationships, no strong interactions worth the variance cost. Boosting shines on large data with structure to exploit; here it just paid an overfitting penalty. Also my class re-weighting (`scale_pos_weight`) deliberately traded calibration for recall, which hurt its Brier score — the threshold-free metrics are the fair comparison, and it still lost those. The bigger point: I'd rather report the true result than tune until the fancy model wins — with the caveat that a ~0.04 AUC gap on a 294-row test set is within split noise, which the comparison doc says out loud.
 
 **"Your accuracy at 0.5 looks fine — why do you keep talking about deciles and lift?"**
 16% base rate makes both accuracy and the 0.5 threshold nearly meaningless — predicting "nobody leaves" gets you 84% accuracy. The real use case is a ranked watch list under a limited outreach budget, so the operational metric is capture in the top decile: 49% of leavers in 10% of the workforce, 4.9× random.

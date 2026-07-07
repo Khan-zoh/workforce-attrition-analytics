@@ -17,31 +17,34 @@ date: "July 7, 2026"
 
 ## What is actually driving attrition
 
-Out of 30 candidate factors tested (with corrections so chance findings don't slip through), four survive as both statistically solid and large enough to act on:
+Out of 30 candidate factors tested (with corrections so chance findings don't slip through), the survivors cluster into **four driver themes** — several of the significant variables are the same underlying signal (tenure, seniority, and pay travel together), so we report themes rather than inflating the count:
 
-**1. Overtime — the loudest, most fixable signal.** Employees working overtime leave at **30.5% vs 10.4%** for everyone else. Controlling for pay, role, tenure, and satisfaction, overtime alone still multiplies the odds of leaving by roughly **6×**. This is not "busy people happen to leave" — it holds after adjusting for everything else we measure.
+**1. Overtime — the loudest signal, and the most directly testable lever.** Employees working overtime leave at **30.5% vs 10.4%** for everyone else. Controlling for pay, role, tenure, and satisfaction, overtime is still associated with roughly **6× higher odds** of leaving. This is not "busy people happen to leave" — the association holds after adjusting for everything else we measure (though only an actual intervention can prove the policy fixes it).
 
 **2. The first two years.** Attrition is **34.9% in year 0–1**, falling to 18.4% in years 2–3 and 8.1% past year ten. Half the battle is getting people through year one.
 
-**3. Low pay, specifically the bottom quartile.** The lowest-paid quartile leaves at **29.3%** vs **10.3%** in the top quartile. In the model, every additional $1,000/month of income measurably lowers exit odds — but the univariate cliff sits between Q1 and Q2, which is where a raise budget buys the most.
+**3. Low pay, specifically the bottom quartile.** The lowest-paid quartile leaves at **29.3%** vs **10.3%** in the top quartile. In the model, every additional $1,000/month of income is associated with measurably lower exit odds — and the cliff sits between Q1 and Q2, which makes the bottom quartile the natural first test for a targeted comp review.
 
-**4. The Sales Representative role.** Nearly **4 in 10 Sales Reps left (39.8%)** — the worst rate of any role, in the role with the lowest median pay. Even after controlling for that pay, the role carries the single largest risk multiplier in the model. Something about the job itself — quota structure, travel load (frequent travelers leave at 6× odds), career path — is broken beyond compensation.
+**4. The Sales Representative role.** Nearly **4 in 10 Sales Reps left (39.8%)** — the worst rate of any role, in the role with the lowest median pay. Even after controlling for that pay, the role carries the single largest risk multiplier in the model, which suggests something about the job itself — quota structure, travel load (frequent travelers show 6× odds), career path — beyond compensation. The data can't say which; it says where to look.
 
 Worth naming what *didn't* survive testing: gender, education field, commute distance, and pay-raise percentage show no dependable relationship with leaving. Several "obvious" factors are significant only on paper, with effects too small to justify spend — the analysis flags these explicitly so budget doesn't chase them.
 
 ## Where the next dollar goes
 
-1. **Cap or compensate overtime, starting in Sales and the lab-technician group.** Largest adjusted effect, most directly controllable lever. Even a partial fix on 416 overtime employees at a 20-point excess attrition rate is worth on the order of $1M/year at the $15K cost assumption.
-2. **Build a year-one program: structured onboarding, a 6-month check-in, and a first-year manager touchpoint.** The 0–1 year cohort (215 people, ~35% attrition) is the cheapest group to move because interventions are process, not payroll.
-3. **Targeted comp review for the bottom pay quartile — not an across-the-board raise.** The data says the return on a raise dollar is concentrated in Q1 (29.3% attrition); above the median it buys almost nothing.
-4. **Redesign the Sales Representative job before backfilling it again.** At ~40% attrition, the company is paying to refill this role continuously; the model says pay alone won't fix it.
+These are prioritized, testable interventions — the analysis identifies where risk concentrates; each program should be piloted and measured (ideally with a control group) before scaling:
+
+1. **Cap or compensate overtime, starting in Sales and the lab-technician group.** Largest adjusted association, most directly controllable lever. The exposure is material: 416 overtime employees carrying a 20-point excess attrition rate represents on the order of $1M/year at the $15K cost assumption — the upper bound on what a successful overtime intervention could recover.
+2. **Build a year-one program: structured onboarding, a 6-month check-in, and a first-year manager touchpoint.** The 0–1 year cohort (215 people, ~35% attrition) is the cheapest group to test because interventions are process, not payroll.
+3. **Targeted comp review for the bottom pay quartile — not an across-the-board raise.** The attrition-pay association is concentrated in Q1 (29.3%); above the median the data shows almost no relationship, so that's where a raise dollar has the least evidence behind it.
+4. **Redesign the Sales Representative job before backfilling it again.** At ~40% attrition, the company is paying to refill this role continuously, and the role effect persists after controlling for pay.
 
 ## Using the watch list responsibly
 
-The model scores every employee 0–1 for exit risk and names each person's top risk factor (e.g., "overtime"). Two ground rules: **it targets support, not surveillance** — the output should trigger a manager conversation about workload or growth, never a preemptive write-off; and **it's a probability, not a verdict** — half the people on the list would have stayed anyway. Used that way, the top-decile list reaches ~49% of true leavers with 10% of the outreach effort.
+The watch list scores every employee 0–1 for exit risk (a calibrated logistic-regression probability — the same model behind every number in this memo) and annotates each person with their top risk pattern (e.g., "overtime") from a companion model. Two ground rules: **it targets support, not surveillance** — the output should trigger a manager conversation about workload or growth, never a preemptive write-off; and **it's a probability, not a verdict** — half the people on the list would have stayed anyway. Used that way, the top-decile list reaches ~49% of true leavers with 10% of the outreach effort.
 
 ## Caveats
 
+- Everything here is an **association measured in observational snapshot data** — the recommendations are prioritized hypotheses with the strongest evidence behind them, not proven causal effects. That's why each intervention should ship with a measurement plan.
 - The underlying dataset is synthetic (IBM's public HR sample) and this memo demonstrates the method; magnitudes are illustrative, direction and approach are transferable.
 - The $15K/leaver cost is a deliberately conservative flat parameter (industry estimates for professional roles run 50–200% of salary); the dashboard exposes it as a slider so you can price scenarios yourself.
 - The data is a snapshot: it distinguishes leavers within the period, and a production deployment would revalidate on a time split.

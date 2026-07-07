@@ -36,10 +36,19 @@ def test_risk_deciles_are_balanced(scores):
 
 def test_risk_scores_required_columns(scores):
     required = {"EmployeeNumber", "set", "Attrition", "risk_score",
-                "risk_decile", "top_shap_driver", "Department", "JobRole",
-                "OverTime", "MonthlyIncome", "Age", "YearsAtCompany",
-                "JobSatisfaction"}
+                "risk_decile", "xgb_score", "top_shap_driver", "Department",
+                "JobRole", "OverTime", "MonthlyIncome", "Age",
+                "YearsAtCompany", "JobSatisfaction"}
     assert required.issubset(scores.columns)
+    assert scores["xgb_score"].between(0, 1).all()
+
+
+def test_dashboard_score_is_the_headline_model(scores):
+    """The decision score in the extract must be the logistic model's —
+    that's the model the README/memo headline metrics come from."""
+    logreg = pd.read_csv(ROOT / "outputs" / "logreg-scores.csv")
+    merged = scores.merge(logreg, on="EmployeeNumber")
+    assert (merged["risk_score"] == merged["logreg_score"]).all()
 
 
 def test_split_contract(split):
@@ -70,9 +79,41 @@ def test_model_metrics_sane(fname):
 def test_driver_tests_battery():
     d = pd.read_csv(ROOT / "outputs" / "driver-tests.csv")
     assert (d["p_adjusted"] >= d["p_raw"] - 1e-12).all()
+    assert "direction" in d.columns and d["direction"].notna().all()
     assert set(d["verdict"]) <= {"meaningful driver", "significant but trivial",
                                  "not significant"}
     # the headline drivers must survive the battery, or the memo story is broken
     meaningful = set(d.loc[d["verdict"] == "meaningful driver", "driver"])
     assert "OverTime" in meaningful
     assert "MonthlyIncome" in meaningful
+
+
+def test_drivers_summary_schema():
+    d = pd.read_csv(ROOT / "outputs" / "drivers-summary.csv")
+    required = {"driver", "level", "n", "leavers", "attrition_rate",
+                "effect_size", "effect_metric", "verdict"}
+    assert required.issubset(d.columns)
+    assert d["attrition_rate"].between(0, 1).all()
+    assert (d.groupby("driver")["n"].sum() == 1470).all()
+
+
+def test_published_headline_numbers_still_hold():
+    """Every number quoted in README.md / memo.md, pinned with tolerances.
+    If any of these fail, the docs are lying — fix the docs or the pipeline."""
+    logreg = pd.read_csv(ROOT / "outputs" / "logreg-metrics.csv").iloc[0]
+    assert abs(logreg["auc"] - 0.865) < 0.005
+    assert abs(logreg["top_decile_capture"] - 0.489) < 0.005
+    assert abs(logreg["top_decile_lift"] - 4.89) < 0.05
+
+    xgb = pd.read_csv(ROOT / "outputs" / "xgb-metrics.csv").iloc[0]
+    assert abs(xgb["auc"] - 0.825) < 0.01  # slightly looser: hardware variance
+
+    scores = pd.read_csv(ROOT / "outputs" / "attrition-risk-scores.csv")
+    n_leavers = scores["Attrition"].eq("Yes").sum()
+    assert n_leavers == 237                      # 16.1% of 1470
+    assert abs(n_leavers / len(scores) - 0.161) < 0.001
+
+    d = pd.read_csv(ROOT / "outputs" / "drivers-summary.csv")
+    ot = d[d["driver"] == "Overtime"].set_index("level")["attrition_rate"]
+    assert abs(ot["Yes"] - 0.305) < 0.001        # 30.5% vs 10.4%
+    assert abs(ot["No"] - 0.104) < 0.001

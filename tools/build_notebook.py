@@ -213,9 +213,22 @@ print("top 3 features by mean |SHAP|:", list(top3))""")
 
 md("""## Score every employee → the dashboard extract
 
-`risk_decile` runs 1–10 with **10 = riskiest**. `top_shap_driver` is the original column (dummies mapped
-back to their source variable) with the largest absolute SHAP value for that employee — the one-word
-answer to "why is this person on the list?".""")
+**Data dictionary — read this before using the extract.** Two models contribute, deliberately and
+with a strict division of labor:
+
+- `risk_score`, `risk_decile` — the **decision score**: the R logistic regression's predicted
+  probability (read from `outputs/logreg-scores.csv`, produced by `03-model-R.Rmd`). It is the
+  better-ranked and better-calibrated model on the shared test set (see `05-model-comparison.md`),
+  and it is the model behind the README/memo headline (49% capture in the top decile), so the
+  dashboard and the headline are the same model. Decile 10 = riskiest.
+- `xgb_score`, `top_shap_driver` — **companion GBM diagnostics**: XGBoost's score and, per employee,
+  the source variable with the largest absolute SHAP value. The SHAP column is a pattern-discovery
+  view whose driver story agrees with the logistic model; it is *not* the explanation of
+  `risk_score`.
+
+Scores cover all 1,470 employees, so training rows are scored in-sample: this extract is a
+**retrospective demonstration** of what a watch list would look like, not a deployment artifact
+(a real deployment would retrain on all labeled history and score an unlabeled current roster).""")
 
 code("""CAT_COLS = [c for c in hr.columns if hr[c].dtype == object and c != "Attrition"]
 
@@ -228,12 +241,16 @@ def to_original(col: str) -> str:
 feature_origin = np.array([to_original(c) for c in X_all.columns])
 top_driver = feature_origin[np.abs(explanation.values).argmax(axis=1)]
 
+logreg_scores = pd.read_csv("outputs/logreg-scores.csv")
+
 scores = df[["EmployeeNumber", "set", "Attrition", "Department", "JobRole",
              "OverTime", "MonthlyIncome", "Age", "YearsAtCompany",
              "JobSatisfaction"]].copy()
-scores["risk_score"] = model.predict_proba(X_all)[:, 1].round(4)
+scores = scores.merge(logreg_scores, on="EmployeeNumber", validate="one_to_one")
+scores = scores.rename(columns={"logreg_score": "risk_score"})
 scores["risk_decile"] = pd.qcut(scores["risk_score"].rank(method="first"),
                                 10, labels=range(1, 11)).astype(int)
+scores["xgb_score"] = model.predict_proba(X_all)[:, 1].round(4)
 scores["top_shap_driver"] = top_driver
 
 scores.to_csv("outputs/attrition-risk-scores.csv", index=False)
@@ -245,9 +262,9 @@ md("""## Takeaways
 - The SQL cuts, the R tests, and SHAP all converge on the same driver story — overtime, early tenure,
   low income/level, and the sales-rep role — which is what you want before recommending action.
 - XGBoost's edge over logistic regression (or lack of one) is quantified in `05-model-comparison.md`,
-  on identical test data.
-- `outputs/attrition-risk-scores.csv` is the Tableau feed: risk score, decile, and a per-employee
-  "why" column.""")
+  on identical test data; on this split, logistic regression ranked and calibrated better.
+- `outputs/attrition-risk-scores.csv` is the Tableau feed: logistic decision score + decile, plus
+  labeled companion-GBM diagnostics (`xgb_score`, `top_shap_driver`).""")
 
 nb["cells"] = cells
 nb["metadata"]["kernelspec"] = {"display_name": "Python 3", "language": "python", "name": "python3"}

@@ -4,8 +4,11 @@ Everything the dashboard needs is already computed and sitting in two CSVs:
 
 | File | Feeds | Grain |
 |---|---|---|
-| `outputs/attrition-risk-scores.csv` | KPI overview + at-risk table | one row per employee (n=1,470), with XGBoost `risk_score`, `risk_decile` (10 = riskiest), and `top_shap_driver` |
+| `outputs/attrition-risk-scores.csv` | KPI overview + at-risk table | one row per employee (n=1,470). `risk_score`/`risk_decile` (10 = riskiest) = the **logistic regression decision score** — the same model behind the README/memo headline numbers. `xgb_score`/`top_shap_driver` = clearly-labeled companion-GBM diagnostics (the "risk pattern" column). |
 | `outputs/drivers-summary.csv` | driver explorer | one row per (driver, level) with group size, attrition rate, effect size, and the Phase-2 verdict |
+
+> Note: scores cover the full historical snapshot (training rows are scored in-sample), so the at-risk
+> table is a **retrospective demonstration** of the watch-list product, not a deployment artifact.
 
 Total build time: roughly 45–60 minutes the first time.
 
@@ -56,13 +59,13 @@ Data source: `drivers-summary`.
 
 ## 5. Sheet 3 — "Who to talk to" at-risk table (~10 min)
 
-Data source: `attrition-risk-scores`. This is the watch list: **current employees** the model rates riskiest, each with its SHAP "why".
+Data source: `attrition-risk-scores`. This is the watch list, shown as a retrospective demo: employees still present in the snapshot whom the model rates riskiest, each annotated with its companion-model risk pattern.
 
 1. Filters shelf: `Attrition` = **No** (leavers can't be retained), `risk_decile` = **10** (top decile; add 9 if you want a longer list).
 2. **Rows:** `EmployeeNumber`, `Department`, `JobRole`, `OverTime`, `top_shap_driver` (all as dimensions — you'll get a text table).
 3. Drag `risk_score` to **Text** (AVG), format 2 decimals; drag `risk_score` to **Color** on the Marks card (red sequential) with Marks type **Square** for a heat-table look; drag `MonthlyIncome`, `Age`, `YearsAtCompany`, `JobSatisfaction` to **Tooltip**.
 4. Sort by `risk_score` descending (toolbar sort button, or right-click `EmployeeNumber` → Sort by field `risk_score` desc).
-5. Title: "Highest-risk current employees — 'Top driver' = largest SHAP attribution for that person".
+5. Title: "Highest-risk employees in the snapshot (retrospective demo) — 'Risk pattern' = companion-model SHAP attribution".
 
 ## 6. Dashboard assembly (~10 min)
 

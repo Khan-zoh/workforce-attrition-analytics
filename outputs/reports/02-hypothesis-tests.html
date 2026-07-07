@@ -1547,19 +1547,24 @@ chi_results &lt;- map_dfr(categorical_vars, function(v) {
   tst &lt;- chisq.test(tab)
   cramers_v &lt;- sqrt(as.numeric(tst$statistic) /
                     (nrow(hr) * (min(dim(tab)) - 1)))
+  rates &lt;- tab[, &quot;Yes&quot;] / rowSums(tab)            # attrition rate per level
   tibble(driver = v, type = &quot;categorical&quot;, test = &quot;Chi-squared&quot;,
          statistic = as.numeric(tst$statistic),
          p_raw = tst$p.value, effect_size = cramers_v,
-         effect_metric = &quot;Cramer&#39;s V&quot;)
+         effect_metric = &quot;Cramer&#39;s V&quot;,
+         direction = paste0(&quot;highest attrition: &quot;, names(which.max(rates)),
+                            &quot; (&quot;, scales::percent(max(rates), 0.1), &quot;)&quot;))
 })
 
 t_results &lt;- map_dfr(numeric_vars, function(v) {
-  tst &lt;- t.test(hr[[v]] ~ hr$Attrition)           # Welch by default
+  tst &lt;- t.test(hr[[v]] ~ hr$Attrition)           # Welch by default; t &gt; 0 means stayers higher
   d &lt;- effsize::cohen.d(hr[[v]] ~ factor(hr$Attrition))
   tibble(driver = v, type = &quot;numeric&quot;, test = &quot;Welch t-test&quot;,
          statistic = as.numeric(tst$statistic),
          p_raw = tst$p.value, effect_size = abs(as.numeric(d$estimate)),
-         effect_metric = &quot;Cohen&#39;s d (abs)&quot;)
+         effect_metric = &quot;Cohen&#39;s d (abs)&quot;,
+         direction = if_else(as.numeric(tst$statistic) &lt; 0,
+                             &quot;higher among leavers&quot;, &quot;lower among leavers&quot;))
 })
 
 results &lt;- bind_rows(chi_results, t_results) %&gt;%
@@ -1584,15 +1589,16 @@ results %&gt;%
 <table>
 <caption>Full test battery (30 tests, Bonferroni-corrected)</caption>
 <colgroup>
-<col width="20%" />
-<col width="9%" />
-<col width="10%" />
-<col width="8%" />
+<col width="14%" />
+<col width="6%" />
+<col width="7%" />
+<col width="5%" />
+<col width="4%" />
 <col width="6%" />
 <col width="9%" />
-<col width="12%" />
-<col width="8%" />
-<col width="14%" />
+<col width="27%" />
+<col width="6%" />
+<col width="10%" />
 </colgroup>
 <thead>
 <tr class="header">
@@ -1603,6 +1609,7 @@ results %&gt;%
 <th align="left">p_raw</th>
 <th align="right">effect_size</th>
 <th align="left">effect_metric</th>
+<th align="left">direction</th>
 <th align="left">p_adjusted</th>
 <th align="left">verdict</th>
 </tr>
@@ -1616,6 +1623,7 @@ results %&gt;%
 <td align="left">1.2e-11</td>
 <td align="right">0.472</td>
 <td align="left">Cohen’s d (abs)</td>
+<td align="left">lower among leavers</td>
 <td align="left">3.5e-10</td>
 <td align="left">meaningful driver</td>
 </tr>
@@ -1627,6 +1635,7 @@ results %&gt;%
 <td align="left">9.8e-13</td>
 <td align="right">0.466</td>
 <td align="left">Cohen’s d (abs)</td>
+<td align="left">lower among leavers</td>
 <td align="left">3.0e-11</td>
 <td align="left">meaningful driver</td>
 </tr>
@@ -1638,6 +1647,7 @@ results %&gt;%
 <td align="left">3.2e-11</td>
 <td align="right">0.442</td>
 <td align="left">Cohen’s d (abs)</td>
+<td align="left">lower among leavers</td>
 <td align="left">9.6e-10</td>
 <td align="left">meaningful driver</td>
 </tr>
@@ -1649,6 +1659,7 @@ results %&gt;%
 <td align="left">4.4e-13</td>
 <td align="right">0.440</td>
 <td align="left">Cohen’s d (abs)</td>
+<td align="left">lower among leavers</td>
 <td align="left">1.3e-11</td>
 <td align="left">meaningful driver</td>
 </tr>
@@ -1660,6 +1671,7 @@ results %&gt;%
 <td align="left">1.4e-08</td>
 <td align="right">0.438</td>
 <td align="left">Cohen’s d (abs)</td>
+<td align="left">lower among leavers</td>
 <td align="left">4.1e-07</td>
 <td align="left">meaningful driver</td>
 </tr>
@@ -1671,6 +1683,7 @@ results %&gt;%
 <td align="left">1.2e-10</td>
 <td align="right">0.430</td>
 <td align="left">Cohen’s d (abs)</td>
+<td align="left">lower among leavers</td>
 <td align="left">3.6e-09</td>
 <td align="left">meaningful driver</td>
 </tr>
@@ -1682,6 +1695,7 @@ results %&gt;%
 <td align="left">2.8e-07</td>
 <td align="right">0.376</td>
 <td align="left">Cohen’s d (abs)</td>
+<td align="left">lower among leavers</td>
 <td align="left">8.4e-06</td>
 <td align="left">meaningful driver</td>
 </tr>
@@ -1693,6 +1707,7 @@ results %&gt;%
 <td align="left">2.3e-07</td>
 <td align="right">0.369</td>
 <td align="left">Cohen’s d (abs)</td>
+<td align="left">lower among leavers</td>
 <td align="left">6.9e-06</td>
 <td align="left">meaningful driver</td>
 </tr>
@@ -1704,6 +1719,7 @@ results %&gt;%
 <td align="left">4.7e-06</td>
 <td align="right">0.356</td>
 <td align="left">Cohen’s d (abs)</td>
+<td align="left">lower among leavers</td>
 <td align="left">0.00014</td>
 <td align="left">meaningful driver</td>
 </tr>
@@ -1715,6 +1731,7 @@ results %&gt;%
 <td align="left">0.00011</td>
 <td align="right">0.283</td>
 <td align="left">Cohen’s d (abs)</td>
+<td align="left">lower among leavers</td>
 <td align="left">0.00316</td>
 <td align="left">meaningful driver</td>
 </tr>
@@ -1726,6 +1743,7 @@ results %&gt;%
 <td align="left">0.00021</td>
 <td align="right">0.282</td>
 <td align="left">Cohen’s d (abs)</td>
+<td align="left">lower among leavers</td>
 <td align="left">0.00628</td>
 <td align="left">meaningful driver</td>
 </tr>
@@ -1737,6 +1755,7 @@ results %&gt;%
 <td align="left">&lt; 2e-16</td>
 <td align="right">0.244</td>
 <td align="left">Cramer’s V</td>
+<td align="left">highest attrition: Yes (30.5%)</td>
 <td align="left">&lt; 2e-16</td>
 <td align="left">meaningful driver</td>
 </tr>
@@ -1748,6 +1767,7 @@ results %&gt;%
 <td align="left">2.8e-15</td>
 <td align="right">0.242</td>
 <td align="left">Cramer’s V</td>
+<td align="left">highest attrition: Sales Representative (39.8%)</td>
 <td align="left">8.3e-14</td>
 <td align="left">meaningful driver</td>
 </tr>
@@ -1759,6 +1779,7 @@ results %&gt;%
 <td align="left">9.5e-11</td>
 <td align="right">0.177</td>
 <td align="left">Cramer’s V</td>
+<td align="left">highest attrition: Single (25.5%)</td>
 <td align="left">2.8e-09</td>
 <td align="left">meaningful driver</td>
 </tr>
@@ -1770,6 +1791,7 @@ results %&gt;%
 <td align="left">5.6e-06</td>
 <td align="right">0.128</td>
 <td align="left">Cramer’s V</td>
+<td align="left">highest attrition: Travel_Frequently (24.9%)</td>
 <td align="left">0.00017</td>
 <td align="left">meaningful driver</td>
 </tr>
@@ -1781,6 +1803,7 @@ results %&gt;%
 <td align="left">0.00414</td>
 <td align="right">0.212</td>
 <td align="left">Cohen’s d (abs)</td>
+<td align="left">higher among leavers</td>
 <td align="left">0.12410</td>
 <td align="left">not significant</td>
 </tr>
@@ -1792,6 +1815,7 @@ results %&gt;%
 <td align="left">0.03047</td>
 <td align="right">0.174</td>
 <td align="left">Cohen’s d (abs)</td>
+<td align="left">lower among leavers</td>
 <td align="left">0.91397</td>
 <td align="left">not significant</td>
 </tr>
@@ -1803,6 +1827,7 @@ results %&gt;%
 <td align="left">0.02036</td>
 <td align="right">0.162</td>
 <td align="left">Cohen’s d (abs)</td>
+<td align="left">lower among leavers</td>
 <td align="left">0.61091</td>
 <td align="left">not significant</td>
 </tr>
@@ -1814,6 +1839,7 @@ results %&gt;%
 <td align="left">0.03004</td>
 <td align="right">0.154</td>
 <td align="left">Cohen’s d (abs)</td>
+<td align="left">lower among leavers</td>
 <td align="left">0.90119</td>
 <td align="left">not significant</td>
 </tr>
@@ -1825,6 +1851,7 @@ results %&gt;%
 <td align="left">0.08973</td>
 <td align="right">0.125</td>
 <td align="left">Cohen’s d (abs)</td>
+<td align="left">lower among leavers</td>
 <td align="left">1.00000</td>
 <td align="left">not significant</td>
 </tr>
@@ -1836,6 +1863,7 @@ results %&gt;%
 <td align="left">0.11633</td>
 <td align="right">0.118</td>
 <td align="left">Cohen’s d (abs)</td>
+<td align="left">higher among leavers</td>
 <td align="left">1.00000</td>
 <td align="left">not significant</td>
 </tr>
@@ -1847,6 +1875,7 @@ results %&gt;%
 <td align="left">0.00677</td>
 <td align="right">0.104</td>
 <td align="left">Cramer’s V</td>
+<td align="left">highest attrition: Human Resources (25.9%)</td>
 <td align="left">0.20322</td>
 <td align="left">not significant</td>
 </tr>
@@ -1858,6 +1887,7 @@ results %&gt;%
 <td align="left">0.19865</td>
 <td align="right">0.090</td>
 <td align="left">Cohen’s d (abs)</td>
+<td align="left">lower among leavers</td>
 <td align="left">1.00000</td>
 <td align="left">not significant</td>
 </tr>
@@ -1869,6 +1899,7 @@ results %&gt;%
 <td align="left">0.00453</td>
 <td align="right">0.086</td>
 <td align="left">Cramer’s V</td>
+<td align="left">highest attrition: Sales (20.6%)</td>
 <td align="left">0.13577</td>
 <td align="left">not significant</td>
 </tr>
@@ -1880,6 +1911,7 @@ results %&gt;%
 <td align="left">0.22417</td>
 <td align="right">0.085</td>
 <td align="left">Cohen’s d (abs)</td>
+<td align="left">lower among leavers</td>
 <td align="left">1.00000</td>
 <td align="left">not significant</td>
 </tr>
@@ -1891,6 +1923,7 @@ results %&gt;%
 <td align="left">0.56534</td>
 <td align="right">0.041</td>
 <td align="left">Cohen’s d (abs)</td>
+<td align="left">higher among leavers</td>
 <td align="left">1.00000</td>
 <td align="left">not significant</td>
 </tr>
@@ -1902,6 +1935,7 @@ results %&gt;%
 <td align="left">0.61443</td>
 <td align="right">0.037</td>
 <td align="left">Cohen’s d (abs)</td>
+<td align="left">lower among leavers</td>
 <td align="left">1.00000</td>
 <td align="left">not significant</td>
 </tr>
@@ -1913,6 +1947,7 @@ results %&gt;%
 <td align="left">0.29057</td>
 <td align="right">0.028</td>
 <td align="left">Cramer’s V</td>
+<td align="left">highest attrition: Male (17.0%)</td>
 <td align="left">1.00000</td>
 <td align="left">not significant</td>
 </tr>
@@ -1924,6 +1959,7 @@ results %&gt;%
 <td align="left">0.79135</td>
 <td align="right">0.019</td>
 <td align="left">Cohen’s d (abs)</td>
+<td align="left">lower among leavers</td>
 <td align="left">1.00000</td>
 <td align="left">not significant</td>
 </tr>
@@ -1935,6 +1971,7 @@ results %&gt;%
 <td align="left">0.91248</td>
 <td align="right">0.008</td>
 <td align="left">Cohen’s d (abs)</td>
+<td align="left">higher among leavers</td>
 <td align="left">1.00000</td>
 <td align="left">not significant</td>
 </tr>
@@ -1967,6 +2004,17 @@ results %&gt;%
 <p><strong>The meaningful drivers</strong> (large effect + survives
 correction) are led by TotalWorkingYears, JobLevel, YearsInCurrentRole,
 MonthlyIncome, Age.</p>
+<p>One honesty note on counting: many of the meaningful numeric drivers
+are the <em>same signal wearing different clothes</em> —
+<code>TotalWorkingYears</code>, <code>JobLevel</code>,
+<code>MonthlyIncome</code>, <code>Age</code>,
+<code>YearsInCurrentRole</code>, and the rest of the tenure/seniority
+family are heavily inter-correlated (Phase 1’s correlation plot).
+Downstream, the memo therefore reports <strong>driver themes</strong>
+(early tenure, low pay/seniority, overtime, the sales-rep role) rather
+than pretending each correlated variable is an independent finding. The
+<code>direction</code> column ties each test back to the plain-English
+claim it supports.</p>
 <p><strong>The “significant but trivial” bucket matters just as
 much.</strong> These drivers clear p &lt; .05 — with n=1,470, that’s a
 low bar — but their effect sizes are too small to base policy on.

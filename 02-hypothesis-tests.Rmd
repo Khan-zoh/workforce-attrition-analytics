@@ -52,19 +52,24 @@ chi_results <- map_dfr(categorical_vars, function(v) {
   tst <- chisq.test(tab)
   cramers_v <- sqrt(as.numeric(tst$statistic) /
                     (nrow(hr) * (min(dim(tab)) - 1)))
+  rates <- tab[, "Yes"] / rowSums(tab)            # attrition rate per level
   tibble(driver = v, type = "categorical", test = "Chi-squared",
          statistic = as.numeric(tst$statistic),
          p_raw = tst$p.value, effect_size = cramers_v,
-         effect_metric = "Cramer's V")
+         effect_metric = "Cramer's V",
+         direction = paste0("highest attrition: ", names(which.max(rates)),
+                            " (", scales::percent(max(rates), 0.1), ")"))
 })
 
 t_results <- map_dfr(numeric_vars, function(v) {
-  tst <- t.test(hr[[v]] ~ hr$Attrition)           # Welch by default
+  tst <- t.test(hr[[v]] ~ hr$Attrition)           # Welch by default; t > 0 means stayers higher
   d <- effsize::cohen.d(hr[[v]] ~ factor(hr$Attrition))
   tibble(driver = v, type = "numeric", test = "Welch t-test",
          statistic = as.numeric(tst$statistic),
          p_raw = tst$p.value, effect_size = abs(as.numeric(d$estimate)),
-         effect_metric = "Cohen's d (abs)")
+         effect_metric = "Cohen's d (abs)",
+         direction = if_else(as.numeric(tst$statistic) < 0,
+                             "higher among leavers", "lower among leavers"))
 })
 
 results <- bind_rows(chi_results, t_results) %>%
@@ -116,6 +121,8 @@ results %>% count(verdict)
 
 **The meaningful drivers** (large effect + survives correction) are led by
 `r results %>% filter(verdict == "meaningful driver") %>% slice_head(n = 5) %>% pull(driver) %>% paste(collapse = ", ")`.
+
+One honesty note on counting: many of the meaningful numeric drivers are the *same signal wearing different clothes* — `TotalWorkingYears`, `JobLevel`, `MonthlyIncome`, `Age`, `YearsInCurrentRole`, and the rest of the tenure/seniority family are heavily inter-correlated (Phase 1's correlation plot). Downstream, the memo therefore reports **driver themes** (early tenure, low pay/seniority, overtime, the sales-rep role) rather than pretending each correlated variable is an independent finding. The `direction` column ties each test back to the plain-English claim it supports.
 
 **The "significant but trivial" bucket matters just as much.** These drivers clear p < .05 — with n=1,470, that's a low bar — but their effect sizes are too small to base policy on. Reporting them as "drivers of attrition" would be statistically defensible and practically misleading. This is exactly the trap the Bonferroni-plus-effect-size design guards against.
 

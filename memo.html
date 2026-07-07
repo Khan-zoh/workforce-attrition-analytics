@@ -196,66 +196,81 @@ works about five times harder than one spread evenly.</p>
 <h2 id="what-is-actually-driving-attrition">What is actually driving
 attrition</h2>
 <p>Out of 30 candidate factors tested (with corrections so chance
-findings don’t slip through), four survive as both statistically solid
-and large enough to act on:</p>
-<p><strong>1. Overtime — the loudest, most fixable signal.</strong>
-Employees working overtime leave at <strong>30.5% vs 10.4%</strong> for
-everyone else. Controlling for pay, role, tenure, and satisfaction,
-overtime alone still multiplies the odds of leaving by roughly
-<strong>6×</strong>. This is not “busy people happen to leave” — it
-holds after adjusting for everything else we measure.</p>
+findings don’t slip through), the survivors cluster into <strong>four
+driver themes</strong> — several of the significant variables are the
+same underlying signal (tenure, seniority, and pay travel together), so
+we report themes rather than inflating the count:</p>
+<p><strong>1. Overtime — the loudest signal, and the most directly
+testable lever.</strong> Employees working overtime leave at
+<strong>30.5% vs 10.4%</strong> for everyone else. Controlling for pay,
+role, tenure, and satisfaction, overtime is still associated with
+roughly <strong>6× higher odds</strong> of leaving. This is not “busy
+people happen to leave” — the association holds after adjusting for
+everything else we measure (though only an actual intervention can prove
+the policy fixes it).</p>
 <p><strong>2. The first two years.</strong> Attrition is <strong>34.9%
 in year 0–1</strong>, falling to 18.4% in years 2–3 and 8.1% past year
 ten. Half the battle is getting people through year one.</p>
 <p><strong>3. Low pay, specifically the bottom quartile.</strong> The
 lowest-paid quartile leaves at <strong>29.3%</strong> vs
 <strong>10.3%</strong> in the top quartile. In the model, every
-additional $1,000/month of income measurably lowers exit odds — but the
-univariate cliff sits between Q1 and Q2, which is where a raise budget
-buys the most.</p>
+additional $1,000/month of income is associated with measurably lower
+exit odds — and the cliff sits between Q1 and Q2, which makes the bottom
+quartile the natural first test for a targeted comp review.</p>
 <p><strong>4. The Sales Representative role.</strong> Nearly <strong>4
 in 10 Sales Reps left (39.8%)</strong> — the worst rate of any role, in
 the role with the lowest median pay. Even after controlling for that
-pay, the role carries the single largest risk multiplier in the model.
-Something about the job itself — quota structure, travel load (frequent
-travelers leave at 6× odds), career path — is broken beyond
-compensation.</p>
+pay, the role carries the single largest risk multiplier in the model,
+which suggests something about the job itself — quota structure, travel
+load (frequent travelers show 6× odds), career path — beyond
+compensation. The data can’t say which; it says where to look.</p>
 <p>Worth naming what <em>didn’t</em> survive testing: gender, education
 field, commute distance, and pay-raise percentage show no dependable
 relationship with leaving. Several “obvious” factors are significant
 only on paper, with effects too small to justify spend — the analysis
 flags these explicitly so budget doesn’t chase them.</p>
 <h2 id="where-the-next-dollar-goes">Where the next dollar goes</h2>
+<p>These are prioritized, testable interventions — the analysis
+identifies where risk concentrates; each program should be piloted and
+measured (ideally with a control group) before scaling:</p>
 <ol type="1">
 <li><strong>Cap or compensate overtime, starting in Sales and the
-lab-technician group.</strong> Largest adjusted effect, most directly
-controllable lever. Even a partial fix on 416 overtime employees at a
-20-point excess attrition rate is worth on the order of $1M/year at the
-$15K cost assumption.</li>
+lab-technician group.</strong> Largest adjusted association, most
+directly controllable lever. The exposure is material: 416 overtime
+employees carrying a 20-point excess attrition rate represents on the
+order of $1M/year at the $15K cost assumption — the upper bound on what
+a successful overtime intervention could recover.</li>
 <li><strong>Build a year-one program: structured onboarding, a 6-month
 check-in, and a first-year manager touchpoint.</strong> The 0–1 year
-cohort (215 people, ~35% attrition) is the cheapest group to move
+cohort (215 people, ~35% attrition) is the cheapest group to test
 because interventions are process, not payroll.</li>
 <li><strong>Targeted comp review for the bottom pay quartile — not an
-across-the-board raise.</strong> The data says the return on a raise
-dollar is concentrated in Q1 (29.3% attrition); above the median it buys
-almost nothing.</li>
+across-the-board raise.</strong> The attrition-pay association is
+concentrated in Q1 (29.3%); above the median the data shows almost no
+relationship, so that’s where a raise dollar has the least evidence
+behind it.</li>
 <li><strong>Redesign the Sales Representative job before backfilling it
 again.</strong> At ~40% attrition, the company is paying to refill this
-role continuously; the model says pay alone won’t fix it.</li>
+role continuously, and the role effect persists after controlling for
+pay.</li>
 </ol>
 <h2 id="using-the-watch-list-responsibly">Using the watch list
 responsibly</h2>
-<p>The model scores every employee 0–1 for exit risk and names each
-person’s top risk factor (e.g., “overtime”). Two ground rules:
-<strong>it targets support, not surveillance</strong> — the output
-should trigger a manager conversation about workload or growth, never a
-preemptive write-off; and <strong>it’s a probability, not a
-verdict</strong> — half the people on the list would have stayed anyway.
-Used that way, the top-decile list reaches ~49% of true leavers with 10%
-of the outreach effort.</p>
+<p>The watch list scores every employee 0–1 for exit risk (a calibrated
+logistic-regression probability — the same model behind every number in
+this memo) and annotates each person with their top risk pattern (e.g.,
+“overtime”) from a companion model. Two ground rules: <strong>it targets
+support, not surveillance</strong> — the output should trigger a manager
+conversation about workload or growth, never a preemptive write-off; and
+<strong>it’s a probability, not a verdict</strong> — half the people on
+the list would have stayed anyway. Used that way, the top-decile list
+reaches ~49% of true leavers with 10% of the outreach effort.</p>
 <h2 id="caveats">Caveats</h2>
 <ul>
+<li>Everything here is an <strong>association measured in observational
+snapshot data</strong> — the recommendations are prioritized hypotheses
+with the strongest evidence behind them, not proven causal effects.
+That’s why each intervention should ship with a measurement plan.</li>
 <li>The underlying dataset is synthetic (IBM’s public HR sample) and
 this memo demonstrates the method; magnitudes are illustrative,
 direction and approach are transferable.</li>

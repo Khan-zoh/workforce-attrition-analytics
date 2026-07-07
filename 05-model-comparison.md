@@ -19,7 +19,7 @@ stratified). Neither model saw a test row before evaluation.
 
 ## The result you don't see on Kaggle leaderboards
 
-**The simple model won.** On 1,470 rows of clean, mostly-linear tabular data, gradient boosting has
+**The simple model won on this split.** On 1,470 rows of clean, mostly-linear tabular data, gradient boosting has
 nothing to exploit that logistic regression can't already capture, and it pays a variance penalty for
 trying. This is a well-documented pattern for small tabular datasets, and the honest conclusion beats
 a tuned-until-it-wins one.
@@ -50,10 +50,12 @@ Two caveats on reading the table:
   remains strong enough for this job, and the two models' driver stories agree (overtime, early tenure,
   low income/level, sales-rep role), which is the real validation.
 
-**Headline numbers for the memo and README come from the logistic regression** (AUC 0.865, top decile
-captures 49% of leavers ≈ 4.9× better than random outreach). The dashboard risk list keeps XGBoost scores
-so every row carries a SHAP explanation; if it were rebuilt for a production deployment, the first
-experiment would be logistic-regression scores with SHAP computed on a calibrated GBM as the explainer.
+**The dashboard and the headline use the same model.** `outputs/attrition-risk-scores.csv` carries the
+logistic regression's probability as `risk_score`/`risk_decile` (the decision score — so the memo's
+"49% capture in the top decile" is a claim about the exact scores on the dashboard), plus two clearly
+labeled companion-GBM columns: `xgb_score` and the per-employee `top_shap_driver`. The SHAP column is a
+pattern-discovery view whose driver story agrees with the logistic model — it is not the explanation of
+`risk_score`, and the data dictionary in the notebook says so explicitly.
 
 ## Limitations that apply to both
 

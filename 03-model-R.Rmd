@@ -27,20 +27,23 @@ The HR director needs two different things from a model: **explanations** (which
 
 ## The shared train/test split
 
-Both models must be judged on the **same** unseen employees, or the comparison is meaningless. This chunk creates the split once — stratified 80/20 on attrition, seed 42 — and writes it to `data/train-test-split.csv`, keyed on `EmployeeNumber`. The Python notebook reads this file; it never re-splits.
+Both models must be judged on the **same** unseen employees, or the comparison is meaningless. The split — stratified 80/20 on attrition, seed 42 — was created once and committed to `data/train-test-split.csv`, keyed on `EmployeeNumber`. If that file exists, this chunk **reads it rather than regenerating it**, so partially re-running the pipeline can never silently put R and Python on different splits. Delete the file to regenerate from seed. The Python notebook reads the same file; it never re-splits.
 
 ```{r split}
 hr <- read_csv("data/hr-attrition.csv", show_col_types = FALSE)
 
-split <- hr %>%
-  group_by(Attrition) %>%
-  mutate(set = if_else(row_number() %in%
-                         sample(n(), size = round(0.8 * n())),
-                       "train", "test")) %>%
-  ungroup() %>%
-  select(EmployeeNumber, set)
-
-write_csv(split, "data/train-test-split.csv")
+if (file.exists("data/train-test-split.csv")) {
+  split <- read_csv("data/train-test-split.csv", show_col_types = FALSE)
+} else {
+  split <- hr %>%
+    group_by(Attrition) %>%
+    mutate(set = if_else(row_number() %in%
+                           sample(n(), size = round(0.8 * n())),
+                         "train", "test")) %>%
+    ungroup() %>%
+    select(EmployeeNumber, set)
+  write_csv(split, "data/train-test-split.csv")
+}
 
 split %>%
   left_join(hr %>% select(EmployeeNumber, Attrition), by = "EmployeeNumber") %>%
@@ -130,6 +133,32 @@ An odds ratio of 2.0 means: holding everything else in the model constant, that 
 
 The precise ordering of collinear tenure-family terms should not be over-read (see feature-prep caveat); the direction and rough magnitude of the effects above are stable.
 
+### Stability check: do the headline odds ratios survive dropping the redundant fields?
+
+The model contains two nested/redundant pairs — `JobLevel` ≈ `MonthlyIncome` (r ≈ 0.95) and `Department` ⊂ `JobRole` — which is exactly where "holding everything else constant" gets fragile. The cheap robustness test: refit without `JobLevel` and `Department` and compare the coefficients we actually interpret in the memo.
+
+```{r stability}
+logreg_slim <- glm(Attrition ~ . - JobLevel - Department,
+                   data = train, family = binomial())
+
+headline_terms <- c("OverTimeYes", "BusinessTravelTravel_Frequently",
+                    "JobRoleSales Representative", "MaritalStatusSingle",
+                    "MonthlyIncome", "JobSatisfaction", "WorkLifeBalance",
+                    "YearsSinceLastPromotion")
+
+bind_rows(
+  tidy(logreg,      exponentiate = TRUE) %>% mutate(model = "full"),
+  tidy(logreg_slim, exponentiate = TRUE) %>% mutate(model = "no JobLevel/Department")
+) %>%
+  filter(term %in% headline_terms) %>%
+  select(term, model, odds_ratio = estimate, p_value = p.value) %>%
+  pivot_wider(names_from = model, values_from = c(odds_ratio, p_value)) %>%
+  mutate(across(where(is.numeric), ~round(., 3))) %>%
+  kable(caption = "Memo-interpreted odds ratios, full model vs redundant-fields-removed")
+```
+
+Every odds ratio the memo leans on should hold direction and rough magnitude across both fits — that's the evidence that the interpreted effects aren't collinearity artifacts. (The tenure-family coefficients, which *do* shuffle between fits, are deliberately not interpreted individually anywhere.)
+
 ## Held-out performance
 
 ```{r evaluate}
@@ -178,6 +207,21 @@ Interpretation guide for the numbers above:
 ggroc(roc_obj, color = "#e15759") +
   geom_abline(intercept = 1, slope = 1, linetype = "dashed") +
   labs(title = paste0("ROC curve — held-out AUC = ", round(auc_val, 3)))
+```
+
+## Export: full-population scores for the dashboard
+
+The dashboard watch list runs on **this model's** scores (it is the better-ranked and better-calibrated of the two — see Phase 3c), so the headline metrics and the operational list come from the same place. Scores over the full population are retrospective/in-sample for the training rows; the dashboard labels them accordingly.
+
+```{r export-scores}
+all_features <- model_df %>% select(-set, -EmployeeNumber)
+logreg_scores <- tibble(
+  EmployeeNumber = model_df$EmployeeNumber,
+  logreg_score = round(predict(logreg, newdata = all_features,
+                               type = "response"), 4)
+)
+write_csv(logreg_scores, "outputs/logreg-scores.csv")
+nrow(logreg_scores)
 ```
 
 Phase 3b asks whether gradient boosting can beat these numbers; Phase 3c decides what each model is *for*.
