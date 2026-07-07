@@ -1,0 +1,46 @@
+driver,level,n,leavers,attrition_rate,effect_size,effect_metric,verdict
+Overtime,No,1054,110,0.1044,0.2440646363288179,Cramer's V,meaningful driver
+Overtime,Yes,416,127,0.3053,0.2440646363288179,Cramer's V,meaningful driver
+Job role,Healthcare Representative,131,9,0.0687,0.2421421599606543,Cramer's V,meaningful driver
+Job role,Human Resources,52,12,0.2308,0.2421421599606543,Cramer's V,meaningful driver
+Job role,Laboratory Technician,259,62,0.2394,0.2421421599606543,Cramer's V,meaningful driver
+Job role,Manager,102,5,0.049,0.2421421599606543,Cramer's V,meaningful driver
+Job role,Manufacturing Director,145,10,0.069,0.2421421599606543,Cramer's V,meaningful driver
+Job role,Research Director,80,2,0.025,0.2421421599606543,Cramer's V,meaningful driver
+Job role,Research Scientist,292,47,0.161,0.2421421599606543,Cramer's V,meaningful driver
+Job role,Sales Executive,326,57,0.1748,0.2421421599606543,Cramer's V,meaningful driver
+Job role,Sales Representative,83,33,0.3976,0.2421421599606543,Cramer's V,meaningful driver
+Department,Human Resources,63,12,0.1905,0.0856984402909795,Cramer's V,not significant
+Department,Research & Development,961,133,0.1384,0.0856984402909795,Cramer's V,not significant
+Department,Sales,446,92,0.2063,0.0856984402909795,Cramer's V,not significant
+Business travel,Non-Travel,150,12,0.08,0.1282599764340671,Cramer's V,meaningful driver
+Business travel,Travel_Frequently,277,69,0.2491,0.1282599764340671,Cramer's V,meaningful driver
+Business travel,Travel_Rarely,1043,156,0.1496,0.1282599764340671,Cramer's V,meaningful driver
+Marital status,Divorced,327,33,0.1009,0.1772113472450737,Cramer's V,meaningful driver
+Marital status,Married,673,84,0.1248,0.1772113472450737,Cramer's V,meaningful driver
+Marital status,Single,470,120,0.2553,0.1772113472450737,Cramer's V,meaningful driver
+Work-life balance (1=worst),1,80,25,0.3125,0.1741091942067024,Cohen's d (abs),not significant
+Work-life balance (1=worst),2,344,58,0.1686,0.1741091942067024,Cohen's d (abs),not significant
+Work-life balance (1=worst),3,893,127,0.1422,0.1741091942067024,Cohen's d (abs),not significant
+Work-life balance (1=worst),4,153,27,0.1765,0.1741091942067024,Cohen's d (abs),not significant
+Job satisfaction (1=worst),1,289,66,0.2284,0.2827254843119071,Cohen's d (abs),meaningful driver
+Job satisfaction (1=worst),2,280,46,0.1643,0.2827254843119071,Cohen's d (abs),meaningful driver
+Job satisfaction (1=worst),3,442,73,0.1652,0.2827254843119071,Cohen's d (abs),meaningful driver
+Job satisfaction (1=worst),4,459,52,0.1133,0.2827254843119071,Cohen's d (abs),meaningful driver
+Stock option level,0,631,154,0.2441,0.3762433806089093,Cohen's d (abs),meaningful driver
+Stock option level,1,596,56,0.094,0.3762433806089093,Cohen's d (abs),meaningful driver
+Stock option level,2,158,12,0.0759,0.3762433806089093,Cohen's d (abs),meaningful driver
+Stock option level,3,85,15,0.1765,0.3762433806089093,Cohen's d (abs),meaningful driver
+Tenure at company,0-1 yr,215,75,0.3488,0.3685512570770875,Cohen's d (abs),meaningful driver
+Tenure at company,2-3 yrs,255,47,0.1843,0.3685512570770875,Cohen's d (abs),meaningful driver
+Tenure at company,4-6 yrs,382,49,0.1283,0.3685512570770875,Cohen's d (abs),meaningful driver
+Tenure at company,7-10 yrs,372,46,0.1237,0.3685512570770875,Cohen's d (abs),meaningful driver
+Tenure at company,10+ yrs,246,20,0.0813,0.3685512570770875,Cohen's d (abs),meaningful driver
+Monthly income,Q1 (lowest),369,108,0.2927,0.4400178033591571,Cohen's d (abs),meaningful driver
+Monthly income,Q2,366,52,0.1421,0.4400178033591571,Cohen's d (abs),meaningful driver
+Monthly income,Q3,367,39,0.1063,0.4400178033591571,Cohen's d (abs),meaningful driver
+Monthly income,Q4 (highest),368,38,0.1033,0.4400178033591571,Cohen's d (abs),meaningful driver
+Age,18-25,123,44,0.3577,0.4382253767967076,Cohen's d (abs),meaningful driver
+Age,26-35,606,116,0.1914,0.4382253767967076,Cohen's d (abs),meaningful driver
+Age,36-45,468,43,0.0919,0.4382253767967076,Cohen's d (abs),meaningful driver
+Age,46-60,273,34,0.1245,0.4382253767967076,Cohen's d (abs),meaningful driver
