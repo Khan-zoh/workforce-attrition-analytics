@@ -1,0 +1,126 @@
+---
+title: "Phase 2 — Which Differences Are Real? Hypothesis Tests & Effect Sizes"
+author: "Zohair Khan"
+date: "2026-07-07"
+output:
+  html_document:
+    toc: true
+    toc_float: true
+    theme: flatly
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE,
+                      fig.width = 9, fig.height = 6)
+library(tidyverse)
+library(effsize)
+library(scales)
+library(knitr)
+theme_set(theme_minimal(base_size = 12))
+```
+
+## Purpose
+
+Phase 1 flagged candidate drivers by eye. This phase asks two harder questions for each one:
+
+1. **Is the difference real** (unlikely under chance), after correcting for the fact that we're running a whole battery of tests?
+2. **Is it big enough to matter?** With n=1,470, trivially small differences can clear statistical significance. We report an effect size next to every p-value and explicitly label the "significant but trivial" cases rather than over-claiming.
+
+**Methods.** Categorical drivers: chi-squared test of independence with Cramér's V for effect size. Numeric drivers (including 1–4/1–5 ordinal ratings, treated as numeric — a documented simplification): Welch's t-test with Cohen's d. All p-values are Bonferroni-corrected across the full battery. Thresholds: effects with adjusted p < .05 are *significant*; among those, |d| < 0.2 or V < 0.1 is labeled **significant but trivial**.
+
+```{r load}
+hr <- read_csv("data/hr-attrition.csv", show_col_types = FALSE) %>%
+  select(-EmployeeCount, -StandardHours, -Over18)
+
+categorical_vars <- c("BusinessTravel", "Department", "EducationField",
+                      "Gender", "JobRole", "MaritalStatus", "OverTime")
+
+numeric_vars <- hr %>%
+  select(where(is.numeric), -EmployeeNumber) %>%
+  names()
+
+length(categorical_vars) + length(numeric_vars)
+```
+
+## The test battery
+
+```{r battery}
+n_tests <- length(categorical_vars) + length(numeric_vars)
+
+chi_results <- map_dfr(categorical_vars, function(v) {
+  tab <- table(hr[[v]], hr$Attrition)
+  tst <- chisq.test(tab)
+  cramers_v <- sqrt(as.numeric(tst$statistic) /
+                    (nrow(hr) * (min(dim(tab)) - 1)))
+  tibble(driver = v, type = "categorical", test = "Chi-squared",
+         statistic = as.numeric(tst$statistic),
+         p_raw = tst$p.value, effect_size = cramers_v,
+         effect_metric = "Cramer's V")
+})
+
+t_results <- map_dfr(numeric_vars, function(v) {
+  tst <- t.test(hr[[v]] ~ hr$Attrition)           # Welch by default
+  d <- effsize::cohen.d(hr[[v]] ~ factor(hr$Attrition))
+  tibble(driver = v, type = "numeric", test = "Welch t-test",
+         statistic = as.numeric(tst$statistic),
+         p_raw = tst$p.value, effect_size = abs(as.numeric(d$estimate)),
+         effect_metric = "Cohen's d (abs)")
+})
+
+results <- bind_rows(chi_results, t_results) %>%
+  mutate(
+    p_adjusted = pmin(p_raw * n_tests, 1),        # Bonferroni
+    verdict = case_when(
+      p_adjusted >= 0.05 ~ "not significant",
+      type == "numeric" & effect_size < 0.2 ~ "significant but trivial",
+      type == "categorical" & effect_size < 0.1 ~ "significant but trivial",
+      TRUE ~ "meaningful driver"
+    )
+  ) %>%
+  arrange(desc(verdict == "meaningful driver"), desc(effect_size))
+
+write_csv(results, "outputs/driver-tests.csv")
+
+results %>%
+  mutate(across(c(statistic, effect_size), ~round(., 3)),
+         across(c(p_raw, p_adjusted), ~format.pval(., digits = 2))) %>%
+  kable(caption = paste0("Full test battery (", n_tests,
+                         " tests, Bonferroni-corrected)"))
+```
+
+## Effect sizes at a glance
+
+```{r effect-plot, fig.height=8}
+ggplot(results, aes(x = reorder(driver, effect_size), y = effect_size,
+                    fill = verdict)) +
+  geom_col() +
+  coord_flip() +
+  facet_wrap(~effect_metric, scales = "free") +
+  scale_fill_manual(values = c("meaningful driver" = "#e15759",
+                               "significant but trivial" = "#f1a340",
+                               "not significant" = "#bdbdbd")) +
+  labs(title = "Driver strength, separated from mere statistical significance",
+       x = NULL, y = "Effect size", fill = NULL) +
+  theme(legend.position = "bottom")
+```
+
+```{r save-fig, include=FALSE}
+ggsave("outputs/figures/driver-effect-sizes.png", width = 9, height = 8, dpi = 150)
+```
+
+## Reading the results honestly
+
+```{r verdict-summary}
+results %>% count(verdict)
+```
+
+**The meaningful drivers** (large effect + survives correction) are led by
+`r results %>% filter(verdict == "meaningful driver") %>% slice_head(n = 5) %>% pull(driver) %>% paste(collapse = ", ")`.
+
+**The "significant but trivial" bucket matters just as much.** These drivers clear p < .05 — with n=1,470, that's a low bar — but their effect sizes are too small to base policy on. Reporting them as "drivers of attrition" would be statistically defensible and practically misleading. This is exactly the trap the Bonferroni-plus-effect-size design guards against.
+
+**Not significant** after correction means we can't distinguish the observed gap from noise at this sample size — not that the effect is proven absent.
+
+## What goes into the models (Phase 3)
+
+All variables go into the models regardless of these verdicts — regularized/multivariate methods can use weak signals and handle correlated features. But when we *interpret* model output for the memo, only the meaningful-driver tier gets translated into recommended actions, and this table is the cross-check that keeps the narrative honest.

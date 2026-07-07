@@ -1,0 +1,31 @@
+driver,type,test,statistic,p_raw,effect_size,effect_metric,p_adjusted,verdict
+TotalWorkingYears,numeric,Welch t-test,7.019178520252025,1.1598167528069102e-11,0.47181508207183365,Cohen's d (abs),3.4794502584207306e-10,meaningful driver
+JobLevel,numeric,Welch t-test,7.385891172768689,9.844802935642923e-13,0.46625332551805515,Cohen's d (abs),2.953440880692877e-11,meaningful driver
+YearsInCurrentRole,numeric,Welch t-test,6.847079159882748,3.187390372205146e-11,0.44201100022171497,Cohen's d (abs),9.562171116615438e-10,meaningful driver
+MonthlyIncome,numeric,Welch t-test,7.482621586644741,4.4335886282861173e-13,0.44001780335915713,Cohen's d (abs),1.3300765884858352e-11,meaningful driver
+Age,numeric,Welch t-test,5.828011853988949,1.3797600649439818e-8,0.4382253767967076,Cohen's d (abs),4.1392801948319457e-7,meaningful driver
+YearsWithCurrManager,numeric,Welch t-test,6.6333988161585,1.1850219000030602e-10,0.42974300936107507,Cohen's d (abs),3.5550657000091805e-9,meaningful driver
+StockOptionLevel,numeric,Welch t-test,5.244220548355719,2.811541457772154e-7,0.3762433806089093,Cohen's d (abs),8.434624373316462e-6,meaningful driver
+YearsAtCompany,numeric,Welch t-test,5.282596058921782,2.285905175272517e-7,0.3685512570770875,Cohen's d (abs),6.857715525817551e-6,meaningful driver
+JobInvolvement,numeric,Welch t-test,4.66020984212599,4.681194598626292e-6,0.35634010903283386,Cohen's d (abs),1.4043583795878876e-4,meaningful driver
+JobSatisfaction,numeric,Welch t-test,3.9261129248238826,1.0520491073974407e-4,0.2827254843119071,Cohen's d (abs),0.003156147322192322,meaningful driver
+EnvironmentSatisfaction,numeric,Welch t-test,3.7512571857971873,2.0920533458833933e-4,0.2824157692567246,Cohen's d (abs),0.00627616003765018,meaningful driver
+OverTime,categorical,Chi-squared,87.56429365828768,8.15842372153835e-21,0.24406463632881792,Cramer's V,2.447527116461505e-19,meaningful driver
+JobRole,categorical,Chi-squared,86.19025367670434,2.752481638050652e-15,0.24214215996065436,Cramer's V,8.257444914151956e-14,meaningful driver
+MaritalStatus,categorical,Chi-squared,46.163676540848705,9.455511060340823e-11,0.1772113472450737,Cramer's V,2.8366533181022467e-9,meaningful driver
+BusinessTravel,categorical,Chi-squared,24.182413685655174,5.608614476449931e-6,0.12825997643406717,Cramer's V,1.6825843429349793e-4,meaningful driver
+DistanceFromHome,numeric,Welch t-test,-2.8881830628176264,0.004136511971511414,0.21240143819754076,Cohen's d (abs),0.12409535914534241,not significant
+WorkLifeBalance,numeric,Welch t-test,2.174192754894939,0.030465673913461576,0.17410919420670246,Cohen's d (abs),0.9139702174038473,not significant
+TrainingTimesLastYear,numeric,Welch t-test,2.3305222667832273,0.02036379212698693,0.16191624122733658,Cohen's d (abs),0.6109137638096079,not significant
+DailyRate,numeric,Welch t-test,2.1788816824417916,0.03003953821029322,0.15419816715130605,Cohen's d (abs),0.9011861463087967,not significant
+RelationshipSatisfaction,numeric,Welch t-test,1.7019371360534652,0.08972776285639425,0.12478825644641604,Cohen's d (abs),1,not significant
+NumCompaniesWorked,numeric,Welch t-test,-1.574651071928319,0.11633402601697651,0.11830521688543076,Cohen's d (abs),1,not significant
+EducationField,categorical,Chi-squared,16.024674119585423,0.006773980139025221,0.10440851908182987,Cramer's V,0.20321940417075662,not significant
+YearsSinceLastPromotion,numeric,Welch t-test,1.2879266009446948,0.19865128276906302,0.08977673651068956,Cohen's d (abs),1,not significant
+Department,categorical,Chi-squared,10.79600732241067,0.004525606574479632,0.0856984402909795,Cramer's V,0.13576819723438896,not significant
+Education,numeric,Welch t-test,1.2177493963259698,0.22417128841924905,0.0852969240157539,Cohen's d (abs),1,not significant
+MonthlyRate,numeric,Welch t-test,-0.5755021579649622,0.5653438280020342,0.04122945822911853,Cohen's d (abs),1,not significant
+PercentSalaryHike,numeric,Welch t-test,0.5042445352368612,0.6144300580581379,0.036630040395951545,Cohen's d (abs),1,not significant
+Gender,categorical,Chi-squared,1.1169671241970975,0.29057244902891166,0.027565224125453088,Cramer's V,1,not significant
+HourlyRate,numeric,Welch t-test,0.264768586360621,0.7913500922193029,0.0186030639803468,Cohen's d (abs),1,not significant
+PerformanceRating,numeric,Welch t-test,-0.10999396263257216,0.9124807769227246,0.0078501510191414,Cohen's d (abs),1,not significant
