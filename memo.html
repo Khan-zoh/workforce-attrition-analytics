@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="" xml:lang="">
+<head>
+  <meta charset="utf-8" />
+  <meta name="generator" content="pandoc" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+  <meta name="author" content="Zohair Khan, Analytics" />
+  <meta name="dcterms.date" content="2026-07-07" />
+  <title>Where the Next Retention Dollar Should Go</title>
+  <style>
+    html {
+      color: #1a1a1a;
+      background-color: #fdfdfd;
+    }
+    body {
+      margin: 0 auto;
+      max-width: 36em;
+      padding-left: 50px;
+      padding-right: 50px;
+      padding-top: 50px;
+      padding-bottom: 50px;
+      hyphens: auto;
+      overflow-wrap: break-word;
+      text-rendering: optimizeLegibility;
+      font-kerning: normal;
+    }
+    @media (max-width: 600px) {
+      body {
+        font-size: 0.9em;
+        padding: 12px;
+      }
+      h1 {
+        font-size: 1.8em;
+      }
+    }
+    @media print {
+      html {
+        background-color: white;
+      }
+      body {
+        background-color: transparent;
+        color: black;
+        font-size: 12pt;
+      }
+      p, h2, h3 {
+        orphans: 3;
+        widows: 3;
+      }
+      h2, h3, h4 {
+        page-break-after: avoid;
+      }
+    }
+    p {
+      margin: 1em 0;
+    }
+    a {
+      color: #1a1a1a;
+    }
+    a:visited {
+      color: #1a1a1a;
+    }
+    img {
+      max-width: 100%;
+    }
+    svg {
+      height: auto;
+      max-width: 100%;
+    }
+    h1, h2, h3, h4, h5, h6 {
+      margin-top: 1.4em;
+    }
+    h5, h6 {
+      font-size: 1em;
+      font-style: italic;
+    }
+    h6 {
+      font-weight: normal;
+    }
+    ol, ul {
+      padding-left: 1.7em;
+      margin-top: 1em;
+    }
+    li > ol, li > ul {
+      margin-top: 0;
+    }
+    blockquote {
+      margin: 1em 0 1em 1.7em;
+      padding-left: 1em;
+      border-left: 2px solid #e6e6e6;
+      color: #606060;
+    }
+    code {
+      font-family: Menlo, Monaco, Consolas, 'Lucida Console', monospace;
+      font-size: 85%;
+      margin: 0;
+      hyphens: manual;
+    }
+    pre {
+      margin: 1em 0;
+      overflow: auto;
+    }
+    pre code {
+      padding: 0;
+      overflow: visible;
+      overflow-wrap: normal;
+    }
+    .sourceCode {
+     background-color: transparent;
+     overflow: visible;
+    }
+    hr {
+      background-color: #1a1a1a;
+      border: none;
+      height: 1px;
+      margin: 1em 0;
+    }
+    table {
+      margin: 1em 0;
+      border-collapse: collapse;
+      width: 100%;
+      overflow-x: auto;
+      display: block;
+      font-variant-numeric: lining-nums tabular-nums;
+    }
+    table caption {
+      margin-bottom: 0.75em;
+    }
+    tbody {
+      margin-top: 0.5em;
+      border-top: 1px solid #1a1a1a;
+      border-bottom: 1px solid #1a1a1a;
+    }
+    th {
+      border-top: 1px solid #1a1a1a;
+      padding: 0.25em 0.5em 0.25em 0.5em;
+    }
+    td {
+      padding: 0.125em 0.5em 0.25em 0.5em;
+    }
+    header {
+      margin-bottom: 4em;
+      text-align: center;
+    }
+    #TOC li {
+      list-style: none;
+    }
+    #TOC ul {
+      padding-left: 1.3em;
+    }
+    #TOC > ul {
+      padding-left: 0;
+    }
+    #TOC a:not(:hover) {
+      text-decoration: none;
+    }
+    code{white-space: pre-wrap;}
+    span.smallcaps{font-variant: small-caps;}
+    div.columns{display: flex; gap: min(4vw, 1.5em);}
+    div.column{flex: auto; overflow-x: auto;}
+    div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+    /* The extra [class] is a hack that increases specificity enough to
+       override a similar rule in reveal.js */
+    ul.task-list[class]{list-style: none;}
+    ul.task-list li input[type="checkbox"] {
+      font-size: inherit;
+      width: 0.8em;
+      margin: 0 0.8em 0.2em -1.6em;
+      vertical-align: middle;
+    }
+    .display.math{display: block; text-align: center; margin: 0.5rem auto;}
+  </style>
+</head>
+<body>
+<header id="title-block-header">
+<h1 class="title">Where the Next Retention Dollar Should Go</h1>
+<p class="subtitle">Workforce attrition — diagnostic, predictive, and
+prescriptive findings</p>
+<p class="author">Zohair Khan, Analytics</p>
+<p class="date">July 7, 2026</p>
+</header>
+<p><strong>To:</strong> HR Director <strong>Re:</strong> Attrition
+drivers and a targeted retention plan <strong>Basis:</strong> Company
+workforce snapshot, n = 1,470 employees <em>(method demonstration on
+IBM’s public synthetic HR dataset; every number below is real output of
+the analysis, but describes that dataset, not a real company)</em></p>
+<hr />
+<h2 id="the-headline">The headline</h2>
+<p><strong>237 of 1,470 employees (16.1%) left in the period analyzed —
+roughly $3.6M a year at a conservative $15K replacement cost per
+leaver.</strong> That cost is not spread evenly: it concentrates in
+overtime workers, first-year employees, the lowest pay quartile, and one
+specific role. A predictive model built on this data can put <strong>49%
+of future leavers inside a watch list covering just 10% of the
+workforce</strong> — meaning a retention budget aimed with this list
+works about five times harder than one spread evenly.</p>
+<h2 id="what-is-actually-driving-attrition">What is actually driving
+attrition</h2>
+<p>Out of 30 candidate factors tested (with corrections so chance
+findings don’t slip through), four survive as both statistically solid
+and large enough to act on:</p>
+<p><strong>1. Overtime — the loudest, most fixable signal.</strong>
+Employees working overtime leave at <strong>30.5% vs 10.4%</strong> for
+everyone else. Controlling for pay, role, tenure, and satisfaction,
+overtime alone still multiplies the odds of leaving by roughly
+<strong>6×</strong>. This is not “busy people happen to leave” — it
+holds after adjusting for everything else we measure.</p>
+<p><strong>2. The first two years.</strong> Attrition is <strong>34.9%
+in year 0–1</strong>, falling to 18.4% in years 2–3 and 8.1% past year
+ten. Half the battle is getting people through year one.</p>
+<p><strong>3. Low pay, specifically the bottom quartile.</strong> The
+lowest-paid quartile leaves at <strong>29.3%</strong> vs
+<strong>10.3%</strong> in the top quartile. In the model, every
+additional $1,000/month of income measurably lowers exit odds — but the
+univariate cliff sits between Q1 and Q2, which is where a raise budget
+buys the most.</p>
+<p><strong>4. The Sales Representative role.</strong> Nearly <strong>4
+in 10 Sales Reps left (39.8%)</strong> — the worst rate of any role, in
+the role with the lowest median pay. Even after controlling for that
+pay, the role carries the single largest risk multiplier in the model.
+Something about the job itself — quota structure, travel load (frequent
+travelers leave at 6× odds), career path — is broken beyond
+compensation.</p>
+<p>Worth naming what <em>didn’t</em> survive testing: gender, education
+field, commute distance, and pay-raise percentage show no dependable
+relationship with leaving. Several “obvious” factors are significant
+only on paper, with effects too small to justify spend — the analysis
+flags these explicitly so budget doesn’t chase them.</p>
+<h2 id="where-the-next-dollar-goes">Where the next dollar goes</h2>
+<ol type="1">
+<li><strong>Cap or compensate overtime, starting in Sales and the
+lab-technician group.</strong> Largest adjusted effect, most directly
+controllable lever. Even a partial fix on 416 overtime employees at a
+20-point excess attrition rate is worth on the order of $1M/year at the
+$15K cost assumption.</li>
+<li><strong>Build a year-one program: structured onboarding, a 6-month
+check-in, and a first-year manager touchpoint.</strong> The 0–1 year
+cohort (215 people, ~35% attrition) is the cheapest group to move
+because interventions are process, not payroll.</li>
+<li><strong>Targeted comp review for the bottom pay quartile — not an
+across-the-board raise.</strong> The data says the return on a raise
+dollar is concentrated in Q1 (29.3% attrition); above the median it buys
+almost nothing.</li>
+<li><strong>Redesign the Sales Representative job before backfilling it
+again.</strong> At ~40% attrition, the company is paying to refill this
+role continuously; the model says pay alone won’t fix it.</li>
+</ol>
+<h2 id="using-the-watch-list-responsibly">Using the watch list
+responsibly</h2>
+<p>The model scores every employee 0–1 for exit risk and names each
+person’s top risk factor (e.g., “overtime”). Two ground rules:
+<strong>it targets support, not surveillance</strong> — the output
+should trigger a manager conversation about workload or growth, never a
+preemptive write-off; and <strong>it’s a probability, not a
+verdict</strong> — half the people on the list would have stayed anyway.
+Used that way, the top-decile list reaches ~49% of true leavers with 10%
+of the outreach effort.</p>
+<h2 id="caveats">Caveats</h2>
+<ul>
+<li>The underlying dataset is synthetic (IBM’s public HR sample) and
+this memo demonstrates the method; magnitudes are illustrative,
+direction and approach are transferable.</li>
+<li>The $15K/leaver cost is a deliberately conservative flat parameter
+(industry estimates for professional roles run 50–200% of salary); the
+dashboard exposes it as a slider so you can price scenarios
+yourself.</li>
+<li>The data is a snapshot: it distinguishes leavers within the period,
+and a production deployment would revalidate on a time split.</li>
+</ul>
+<p><em>Full analysis, dashboard, and reproducible code:
+github.com/Khan-zoh/workforce-attrition-analytics</em></p>
+</body>
+</html>
