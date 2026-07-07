@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Workforce Attrition Analytics — Dashboard</title>
+<style>
+  :root { --red:#e15759; --dark:#2b3a55; --muted:#6b7280; --bg:#f6f7f9; --card:#ffffff; }
+  * { box-sizing:border-box; margin:0; }
+  body { font-family:'Segoe UI',system-ui,sans-serif; background:var(--bg); color:#1f2937; padding:24px; }
+  h1 { font-size:22px; color:var(--dark); }
+  .sub { color:var(--muted); font-size:13px; margin:4px 0 20px; }
+  .row { display:flex; gap:16px; flex-wrap:wrap; margin-bottom:16px; }
+  .card { background:var(--card); border-radius:10px; padding:18px 20px; box-shadow:0 1px 3px rgba(0,0,0,.08); }
+  .kpi { flex:1; min-width:180px; text-align:center; }
+  .kpi .big { font-size:34px; font-weight:700; color:var(--red); }
+  .kpi .lbl { font-size:12px; color:var(--muted); text-transform:uppercase; letter-spacing:.05em; margin-top:4px; }
+  .half { flex:1; min-width:420px; }
+  h2 { font-size:15px; color:var(--dark); margin-bottom:4px; }
+  .note { font-size:12px; color:var(--muted); margin-bottom:12px; }
+  .bar-row { display:flex; align-items:center; margin:5px 0; font-size:12.5px; }
+  .bar-label { width:220px; text-align:right; padding-right:10px; color:#374151; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .bar-track { flex:1; background:#eef0f3; border-radius:4px; height:20px; position:relative; }
+  .bar-fill { background:var(--red); height:100%; border-radius:4px; }
+  .bar-val { position:absolute; left:calc(100% + 8px); top:1px; font-size:11.5px; color:#374151; white-space:nowrap; }
+  .bar-track { margin-right:86px; }
+  .avg-line { position:absolute; top:-3px; bottom:-3px; width:2px; background:var(--dark); opacity:.55; }
+  select, input[type=range] { font:inherit; }
+  .controls { display:flex; gap:18px; align-items:center; font-size:13px; margin-bottom:10px; flex-wrap:wrap; }
+  table { width:100%; border-collapse:collapse; font-size:12.5px; }
+  th { text-align:left; color:var(--muted); font-weight:600; padding:7px 8px; border-bottom:2px solid #e5e7eb;
+       cursor:pointer; user-select:none; white-space:nowrap; }
+  td { padding:6px 8px; border-bottom:1px solid #f0f1f3; }
+  .score { font-weight:700; padding:2px 8px; border-radius:4px; color:#fff; }
+  .pill { background:#eef2ff; color:#3730a3; border-radius:999px; padding:2px 9px; font-size:11.5px; white-space:nowrap; }
+  footer { font-size:11.5px; color:var(--muted); margin-top:18px; line-height:1.5; }
+</style>
+</head>
+<body>
+<h1>Workforce Attrition Analytics</h1>
+<div class="sub">IBM HR sample data (synthetic, n=1,470) &middot; retrospective demonstration &middot;
+risk scores = logistic regression (held-out AUC 0.865) &middot; risk patterns = companion XGBoost/SHAP &middot;
+<a href="https://github.com/Khan-zoh/workforce-attrition-analytics">full analysis on GitHub</a></div>
+
+<div class="row">
+  <div class="card kpi"><div class="big">16.1%</div><div class="lbl">Attrition rate</div></div>
+  <div class="card kpi"><div class="big">237</div><div class="lbl">Leavers (of 1,470)</div></div>
+  <div class="card kpi"><div class="big" id="cost">$3.6M</div><div class="lbl">Annual cost @ <span id="costLbl">$15K</span>/leaver</div>
+    <input type="range" id="costSlider" min="5000" max="50000" step="5000" value="15000" style="width:90%"></div>
+  <div class="card kpi"><div class="big">4.9&times;</div><div class="lbl">Top-decile lift (test set)</div></div>
+</div>
+
+<div class="row">
+  <div class="card half">
+    <h2>Attrition by department</h2>
+    <div class="note">Line = company average (16.1%)</div>
+    <div id="deptChart"></div>
+  </div>
+  <div class="card half">
+    <h2>Why people leave — driver explorer</h2>
+    <div class="controls">
+      <label>Driver: <select id="driverSel"></select></label>
+      <span class="note" id="driverMeta" style="margin:0"></span>
+    </div>
+    <div id="driverChart"></div>
+  </div>
+</div>
+
+<div class="card">
+  <h2>Watch list — highest-risk employees in the snapshot (top decile, stayers only)</h2>
+  <div class="note">Retrospective demo: model trained on this labeled snapshot; a deployment would score an
+  unlabeled current roster. "Risk pattern" is the companion model's largest SHAP attribution — a conversation
+  starter, not a verdict. Click headers to sort.</div>
+  <table id="watchTable"><thead><tr>
+    <th data-k="EmployeeNumber">ID</th><th data-k="Department">Department</th><th data-k="JobRole">Role</th>
+    <th data-k="OverTime">Overtime</th><th data-k="MonthlyIncome">Income/mo</th><th data-k="Age">Age</th>
+    <th data-k="YearsAtCompany">Tenure</th><th data-k="risk_score">Risk score</th><th data-k="top_shap_driver">Risk pattern</th>
+  </tr></thead><tbody></tbody></table>
+</div>
+
+<footer>Method: 30-driver hypothesis-test battery (chi-squared / Welch, Bonferroni-corrected, effect sizes) &rarr;
+logistic regression (R) vs XGBoost+SHAP (Python) on a shared held-out split &rarr; this dashboard + executive memo.
+Drivers shown in the explorer are limited to those that survived multiple-comparison correction with
+non-trivial effect sizes, unless "show all" is chosen. Zohair Khan &middot; 2026.</footer>
+
+<script>
+const LEAVERS=237, RATE=0.161224;
+const DRIVERS=[{"driver": "Overtime", "level": "No", "n": 1054, "leavers": 110, "attrition_rate": 0.1044, "effect_size": 0.2440646363288179, "effect_metric": "Cramer's V", "verdict": "meaningful driver"}, {"driver": "Overtime", "level": "Yes", "n": 416, "leavers": 127, "attrition_rate": 0.3053, "effect_size": 0.2440646363288179, "effect_metric": "Cramer's V", "verdict": "meaningful driver"}, {"driver": "Job role", "level": "Healthcare Representative", "n": 131, "leavers": 9, "attrition_rate": 0.0687, "effect_size": 0.2421421599606543, "effect_metric": "Cramer's V", "verdict": "meaningful driver"}, {"driver": "Job role", "level": "Human Resources", "n": 52, "leavers": 12, "attrition_rate": 0.2308, "effect_size": 0.2421421599606543, "effect_metric": "Cramer's V", "verdict": "meaningful driver"}, {"driver": "Job role", "level": "Laboratory Technician", "n": 259, "leavers": 62, "attrition_rate": 0.2394, "effect_size": 0.2421421599606543, "effect_metric": "Cramer's V", "verdict": "meaningful driver"}, {"driver": "Job role", "level": "Manager", "n": 102, "leavers": 5, "attrition_rate": 0.049, "effect_size": 0.2421421599606543, "effect_metric": "Cramer's V", "verdict": "meaningful driver"}, {"driver": "Job role", "level": "Manufacturing Director", "n": 145, "leavers": 10, "attrition_rate": 0.069, "effect_size": 0.2421421599606543, "effect_metric": "Cramer's V", "verdict": "meaningful driver"}, {"driver": "Job role", "level": "Research Director", "n": 80, "leavers": 2, "attrition_rate": 0.025, "effect_size": 0.2421421599606543, "effect_metric": "Cramer's V", "verdict": "meaningful driver"}, {"driver": "Job role", "level": "Research Scientist", "n": 292, "leavers": 47, "attrition_rate": 0.161, "effect_size": 0.2421421599606543, "effect_metric": "Cramer's V", "verdict": "meaningful driver"}, {"driver": "Job role", "level": "Sales Executive", "n": 326, "leavers": 57, "attrition_rate": 0.1748, "effect_size": 0.2421421599606543, "effect_metric": "Cramer's V", "verdict": "meaningful driver"}, {"driver": "Job role", "level": "Sales Representative", "n": 83, "leavers": 33, "attrition_rate": 0.3976, "effect_size": 0.2421421599606543, "effect_metric": "Cramer's V", "verdict": "meaningful driver"}, {"driver": "Department", "level": "Human Resources", "n": 63, "leavers": 12, "attrition_rate": 0.1905, "effect_size": 0.0856984402909795, "effect_metric": "Cramer's V", "verdict": "not significant"}, {"driver": "Department", "level": "Research & Development", "n": 961, "leavers": 133, "attrition_rate": 0.1384, "effect_size": 0.0856984402909795, "effect_metric": "Cramer's V", "verdict": "not significant"}, {"driver": "Department", "level": "Sales", "n": 446, "leavers": 92, "attrition_rate": 0.2063, "effect_size": 0.0856984402909795, "effect_metric": "Cramer's V", "verdict": "not significant"}, {"driver": "Business travel", "level": "Non-Travel", "n": 150, "leavers": 12, "attrition_rate": 0.08, "effect_size": 0.1282599764340671, "effect_metric": "Cramer's V", "verdict": "meaningful driver"}, {"driver": "Business travel", "level": "Travel_Frequently", "n": 277, "leavers": 69, "attrition_rate": 0.2491, "effect_size": 0.1282599764340671, "effect_metric": "Cramer's V", "verdict": "meaningful driver"}, {"driver": "Business travel", "level": "Travel_Rarely", "n": 1043, "leavers": 156, "attrition_rate": 0.1496, "effect_size": 0.1282599764340671, "effect_metric": "Cramer's V", "verdict": "meaningful driver"}, {"driver": "Marital status", "level": "Divorced", "n": 327, "leavers": 33, "attrition_rate": 0.1009, "effect_size": 0.1772113472450737, "effect_metric": "Cramer's V", "verdict": "meaningful driver"}, {"driver": "Marital status", "level": "Married", "n": 673, "leavers": 84, "attrition_rate": 0.1248, "effect_size": 0.1772113472450737, "effect_metric": "Cramer's V", "verdict": "meaningful driver"}, {"driver": "Marital status", "level": "Single", "n": 470, "leavers": 120, "attrition_rate": 0.2553, "effect_size": 0.1772113472450737, "effect_metric": "Cramer's V", "verdict": "meaningful driver"}, {"driver": "Work-life balance (1=worst)", "level": "1", "n": 80, "leavers": 25, "attrition_rate": 0.3125, "effect_size": 0.1741091942067024, "effect_metric": "Cohen's d (abs)", "verdict": "not significant"}, {"driver": "Work-life balance (1=worst)", "level": "2", "n": 344, "leavers": 58, "attrition_rate": 0.1686, "effect_size": 0.1741091942067024, "effect_metric": "Cohen's d (abs)", "verdict": "not significant"}, {"driver": "Work-life balance (1=worst)", "level": "3", "n": 893, "leavers": 127, "attrition_rate": 0.1422, "effect_size": 0.1741091942067024, "effect_metric": "Cohen's d (abs)", "verdict": "not significant"}, {"driver": "Work-life balance (1=worst)", "level": "4", "n": 153, "leavers": 27, "attrition_rate": 0.1765, "effect_size": 0.1741091942067024, "effect_metric": "Cohen's d (abs)", "verdict": "not significant"}, {"driver": "Job satisfaction (1=worst)", "level": "1", "n": 289, "leavers": 66, "attrition_rate": 0.2284, "effect_size": 0.2827254843119071, "effect_metric": "Cohen's d (abs)", "verdict": "meaningful driver"}, {"driver": "Job satisfaction (1=worst)", "level": "2", "n": 280, "leavers": 46, "attrition_rate": 0.1643, "effect_size": 0.2827254843119071, "effect_metric": "Cohen's d (abs)", "verdict": "meaningful driver"}, {"driver": "Job satisfaction (1=worst)", "level": "3", "n": 442, "leavers": 73, "attrition_rate": 0.1652, "effect_size": 0.2827254843119071, "effect_metric": "Cohen's d (abs)", "verdict": "meaningful driver"}, {"driver": "Job satisfaction (1=worst)", "level": "4", "n": 459, "leavers": 52, "attrition_rate": 0.1133, "effect_size": 0.2827254843119071, "effect_metric": "Cohen's d (abs)", "verdict": "meaningful driver"}, {"driver": "Stock option level", "level": "0", "n": 631, "leavers": 154, "attrition_rate": 0.2441, "effect_size": 0.3762433806089093, "effect_metric": "Cohen's d (abs)", "verdict": "meaningful driver"}, {"driver": "Stock option level", "level": "1", "n": 596, "leavers": 56, "attrition_rate": 0.094, "effect_size": 0.3762433806089093, "effect_metric": "Cohen's d (abs)", "verdict": "meaningful driver"}, {"driver": "Stock option level", "level": "2", "n": 158, "leavers": 12, "attrition_rate": 0.0759, "effect_size": 0.3762433806089093, "effect_metric": "Cohen's d (abs)", "verdict": "meaningful driver"}, {"driver": "Stock option level", "level": "3", "n": 85, "leavers": 15, "attrition_rate": 0.1765, "effect_size": 0.3762433806089093, "effect_metric": "Cohen's d (abs)", "verdict": "meaningful driver"}, {"driver": "Tenure at company", "level": "0-1 yr", "n": 215, "leavers": 75, "attrition_rate": 0.3488, "effect_size": 0.3685512570770875, "effect_metric": "Cohen's d (abs)", "verdict": "meaningful driver"}, {"driver": "Tenure at company", "level": "2-3 yrs", "n": 255, "leavers": 47, "attrition_rate": 0.1843, "effect_size": 0.3685512570770875, "effect_metric": "Cohen's d (abs)", "verdict": "meaningful driver"}, {"driver": "Tenure at company", "level": "4-6 yrs", "n": 382, "leavers": 49, "attrition_rate": 0.1283, "effect_size": 0.3685512570770875, "effect_metric": "Cohen's d (abs)", "verdict": "meaningful driver"}, {"driver": "Tenure at company", "level": "7-10 yrs", "n": 372, "leavers": 46, "attrition_rate": 0.1237, "effect_size": 0.3685512570770875, "effect_metric": "Cohen's d (abs)", "verdict": "meaningful driver"}, {"driver": "Tenure at company", "level": "10+ yrs", "n": 246, "leavers": 20, "attrition_rate": 0.0813, "effect_size": 0.3685512570770875, "effect_metric": "Cohen's d (abs)", "verdict": "meaningful driver"}, {"driver": "Monthly income", "level": "Q1 (lowest)", "n": 369, "leavers": 108, "attrition_rate": 0.2927, "effect_size": 0.4400178033591571, "effect_metric": "Cohen's d (abs)", "verdict": "meaningful driver"}, {"driver": "Monthly income", "level": "Q2", "n": 366, "leavers": 52, "attrition_rate": 0.1421, "effect_size": 0.4400178033591571, "effect_metric": "Cohen's d (abs)", "verdict": "meaningful driver"}, {"driver": "Monthly income", "level": "Q3", "n": 367, "leavers": 39, "attrition_rate": 0.1063, "effect_size": 0.4400178033591571, "effect_metric": "Cohen's d (abs)", "verdict": "meaningful driver"}, {"driver": "Monthly income", "level": "Q4 (highest)", "n": 368, "leavers": 38, "attrition_rate": 0.1033, "effect_size": 0.4400178033591571, "effect_metric": "Cohen's d (abs)", "verdict": "meaningful driver"}, {"driver": "Age", "level": "18-25", "n": 123, "leavers": 44, "attrition_rate": 0.3577, "effect_size": 0.4382253767967076, "effect_metric": "Cohen's d (abs)", "verdict": "meaningful driver"}, {"driver": "Age", "level": "26-35", "n": 606, "leavers": 116, "attrition_rate": 0.1914, "effect_size": 0.4382253767967076, "effect_metric": "Cohen's d (abs)", "verdict": "meaningful driver"}, {"driver": "Age", "level": "36-45", "n": 468, "leavers": 43, "attrition_rate": 0.0919, "effect_size": 0.4382253767967076, "effect_metric": "Cohen's d (abs)", "verdict": "meaningful driver"}, {"driver": "Age", "level": "46-60", "n": 273, "leavers": 34, "attrition_rate": 0.1245, "effect_size": 0.4382253767967076, "effect_metric": "Cohen's d (abs)", "verdict": "meaningful driver"}];
+const DEPT=[{"Department": "Sales", "n": 446, "rate": 0.2062780269058296}, {"Department": "Human Resources", "n": 63, "rate": 0.19047619047619047}, {"Department": "Research & Development", "n": 961, "rate": 0.1383975026014568}];
+const WATCH=[{"EmployeeNumber": 72, "Department": "Sales", "JobRole": "Sales Executive", "OverTime": "Yes", "MonthlyIncome": 4157, "Age": 26, "YearsAtCompany": 2, "risk_score": 0.7622, "top_shap_driver": "StockOptionLevel"}, {"EmployeeNumber": 1019, "Department": "Research & Development", "JobRole": "Laboratory Technician", "OverTime": "No", "MonthlyIncome": 2451, "Age": 22, "YearsAtCompany": 4, "risk_score": 0.7329, "top_shap_driver": "OverTime"}, {"EmployeeNumber": 1198, "Department": "Research & Development", "JobRole": "Laboratory Technician", "OverTime": "No", "MonthlyIncome": 3033, "Age": 20, "YearsAtCompany": 2, "risk_score": 0.7149, "top_shap_driver": "Age"}, {"EmployeeNumber": 1646, "Department": "Research & Development", "JobRole": "Research Scientist", "OverTime": "Yes", "MonthlyIncome": 3760, "Age": 24, "YearsAtCompany": 6, "risk_score": 0.7068, "top_shap_driver": "JobLevel"}, {"EmployeeNumber": 2021, "Department": "Sales", "JobRole": "Sales Representative", "OverTime": "Yes", "MonthlyIncome": 2380, "Age": 21, "YearsAtCompany": 2, "risk_score": 0.6659, "top_shap_driver": "MonthlyIncome"}, {"EmployeeNumber": 1001, "Department": "Research & Development", "JobRole": "Laboratory Technician", "OverTime": "No", "MonthlyIncome": 2811, "Age": 27, "YearsAtCompany": 2, "risk_score": 0.6488, "top_shap_driver": "OverTime"}, {"EmployeeNumber": 1961, "Department": "Sales", "JobRole": "Sales Representative", "OverTime": "No", "MonthlyIncome": 2858, "Age": 38, "YearsAtCompany": 1, "risk_score": 0.6463, "top_shap_driver": "Age"}, {"EmployeeNumber": 390, "Department": "Research & Development", "JobRole": "Healthcare Representative", "OverTime": "Yes", "MonthlyIncome": 4741, "Age": 26, "YearsAtCompany": 5, "risk_score": 0.6377, "top_shap_driver": "StockOptionLevel"}, {"EmployeeNumber": 783, "Department": "Sales", "JobRole": "Sales Representative", "OverTime": "No", "MonthlyIncome": 6632, "Age": 45, "YearsAtCompany": 8, "risk_score": 0.6307, "top_shap_driver": "Age"}, {"EmployeeNumber": 669, "Department": "Sales", "JobRole": "Sales Representative", "OverTime": "No", "MonthlyIncome": 3447, "Age": 21, "YearsAtCompany": 3, "risk_score": 0.6287, "top_shap_driver": "Age"}, {"EmployeeNumber": 832, "Department": "Research & Development", "JobRole": "Laboratory Technician", "OverTime": "No", "MonthlyIncome": 5094, "Age": 40, "YearsAtCompany": 1, "risk_score": 0.6076, "top_shap_driver": "Age"}, {"EmployeeNumber": 732, "Department": "Sales", "JobRole": "Sales Executive", "OverTime": "No", "MonthlyIncome": 5405, "Age": 60, "YearsAtCompany": 2, "risk_score": 0.6003, "top_shap_driver": "OverTime"}, {"EmployeeNumber": 1611, "Department": "Research & Development", "JobRole": "Laboratory Technician", "OverTime": "Yes", "MonthlyIncome": 5769, "Age": 45, "YearsAtCompany": 10, "risk_score": 0.5974, "top_shap_driver": "OverTime"}, {"EmployeeNumber": 1594, "Department": "Research & Development", "JobRole": "Laboratory Technician", "OverTime": "Yes", "MonthlyIncome": 5562, "Age": 36, "YearsAtCompany": 3, "risk_score": 0.5931, "top_shap_driver": "OverTime"}, {"EmployeeNumber": 792, "Department": "Research & Development", "JobRole": "Laboratory Technician", "OverTime": "No", "MonthlyIncome": 4364, "Age": 26, "YearsAtCompany": 2, "risk_score": 0.5862, "top_shap_driver": "JobLevel"}, {"EmployeeNumber": 274, "Department": "Research & Development", "JobRole": "Manufacturing Director", "OverTime": "No", "MonthlyIncome": 4298, "Age": 27, "YearsAtCompany": 2, "risk_score": 0.5801, "top_shap_driver": "StockOptionLevel"}, {"EmployeeNumber": 424, "Department": "Human Resources", "JobRole": "Human Resources", "OverTime": "No", "MonthlyIncome": 6410, "Age": 31, "YearsAtCompany": 2, "risk_score": 0.5736, "top_shap_driver": "Age"}, {"EmployeeNumber": 1286, "Department": "Research & Development", "JobRole": "Laboratory Technician", "OverTime": "Yes", "MonthlyIncome": 2154, "Age": 28, "YearsAtCompany": 4, "risk_score": 0.571, "top_shap_driver": "JobLevel"}, {"EmployeeNumber": 846, "Department": "Sales", "JobRole": "Sales Executive", "OverTime": "Yes", "MonthlyIncome": 4779, "Age": 28, "YearsAtCompany": 8, "risk_score": 0.5652, "top_shap_driver": "OverTime"}, {"EmployeeNumber": 2010, "Department": "Research & Development", "JobRole": "Laboratory Technician", "OverTime": "No", "MonthlyIncome": 2837, "Age": 32, "YearsAtCompany": 6, "risk_score": 0.5576, "top_shap_driver": "Age"}, {"EmployeeNumber": 1296, "Department": "Research & Development", "JobRole": "Laboratory Technician", "OverTime": "Yes", "MonthlyIncome": 3867, "Age": 28, "YearsAtCompany": 2, "risk_score": 0.5492, "top_shap_driver": "JobLevel"}, {"EmployeeNumber": 436, "Department": "Sales", "JobRole": "Sales Executive", "OverTime": "Yes", "MonthlyIncome": 5228, "Age": 32, "YearsAtCompany": 13, "risk_score": 0.5368, "top_shap_driver": "StockOptionLevel"}, {"EmployeeNumber": 1533, "Department": "Research & Development", "JobRole": "Laboratory Technician", "OverTime": "No", "MonthlyIncome": 2272, "Age": 23, "YearsAtCompany": 4, "risk_score": 0.5333, "top_shap_driver": "Age"}, {"EmployeeNumber": 1307, "Department": "Research & Development", "JobRole": "Manager", "OverTime": "Yes", "MonthlyIncome": 17123, "Age": 39, "YearsAtCompany": 19, "risk_score": 0.5275, "top_shap_driver": "MonthlyIncome"}, {"EmployeeNumber": 75, "Department": "Research & Development", "JobRole": "Laboratory Technician", "OverTime": "Yes", "MonthlyIncome": 4014, "Age": 35, "YearsAtCompany": 2, "risk_score": 0.5275, "top_shap_driver": "OverTime"}, {"EmployeeNumber": 913, "Department": "Research & Development", "JobRole": "Research Scientist", "OverTime": "Yes", "MonthlyIncome": 2559, "Age": 44, "YearsAtCompany": 8, "risk_score": 0.5245, "top_shap_driver": "OverTime"}, {"EmployeeNumber": 467, "Department": "Sales", "JobRole": "Sales Representative", "OverTime": "No", "MonthlyIncome": 2976, "Age": 47, "YearsAtCompany": 0, "risk_score": 0.5241, "top_shap_driver": "Age"}, {"EmployeeNumber": 1496, "Department": "Research & Development", "JobRole": "Manufacturing Director", "OverTime": "Yes", "MonthlyIncome": 10209, "Age": 44, "YearsAtCompany": 2, "risk_score": 0.5181, "top_shap_driver": "Age"}, {"EmployeeNumber": 1148, "Department": "Research & Development", "JobRole": "Laboratory Technician", "OverTime": "No", "MonthlyIncome": 4272, "Age": 42, "YearsAtCompany": 1, "risk_score": 0.5178, "top_shap_driver": "Age"}, {"EmployeeNumber": 1539, "Department": "Research & Development", "JobRole": "Research Director", "OverTime": "Yes", "MonthlyIncome": 14411, "Age": 50, "YearsAtCompany": 32, "risk_score": 0.4958, "top_shap_driver": "OverTime"}, {"EmployeeNumber": 1173, "Department": "Research & Development", "JobRole": "Laboratory Technician", "OverTime": "No", "MonthlyIncome": 3597, "Age": 24, "YearsAtCompany": 4, "risk_score": 0.4865, "top_shap_driver": "Age"}, {"EmployeeNumber": 1975, "Department": "Sales", "JobRole": "Sales Executive", "OverTime": "No", "MonthlyIncome": 13341, "Age": 39, "YearsAtCompany": 20, "risk_score": 0.4834, "top_shap_driver": "OverTime"}, {"EmployeeNumber": 205, "Department": "Sales", "JobRole": "Sales Representative", "OverTime": "Yes", "MonthlyIncome": 2306, "Age": 53, "YearsAtCompany": 7, "risk_score": 0.4811, "top_shap_driver": "MonthlyIncome"}];
+
+// cost KPI
+const fmtM = v => '$'+(v/1e6).toFixed(1)+'M';
+costSlider.oninput = () => {
+  cost.textContent = fmtM(LEAVERS*costSlider.value);
+  costLbl.textContent = '$'+(costSlider.value/1000)+'K';
+};
+costSlider.oninput();
+
+function bars(el, rows, maxV) {
+  el.innerHTML = rows.map(r => `
+    <div class="bar-row"><div class="bar-label" title="${r.label}">${r.label}</div>
+      <div class="bar-track">
+        <div class="bar-fill" style="width:${(100*r.v/maxV).toFixed(1)}%"></div>
+        <div class="avg-line" style="left:${(100*RATE/maxV).toFixed(1)}%"></div>
+        <div class="bar-val">${(100*r.v).toFixed(1)}% (n=${r.n})</div>
+      </div></div>`).join('');
+}
+
+// department chart
+bars(deptChart, DEPT.map(d => ({label:d.Department, v:d.rate, n:d.n})), 0.5);
+
+// driver explorer
+const meaningful = [...new Set(DRIVERS.filter(d => d.verdict==='meaningful driver').map(d => d.driver))];
+const allDrivers = [...new Set(DRIVERS.map(d => d.driver))];
+driverSel.innerHTML = meaningful.map(d => `<option>${d}</option>`).join('') +
+  allDrivers.filter(d => !meaningful.includes(d)).map(d => `<option>${d} (below threshold)</option>`).join('');
+function drawDriver() {
+  const name = driverSel.value.replace(' (below threshold)','');
+  const rows = DRIVERS.filter(d => d.driver===name);
+  bars(driverChart, rows.map(r => ({label:r.level, v:r.attrition_rate, n:r.n})), 0.5);
+  driverMeta.textContent = `${rows[0].effect_metric} = ${(+rows[0].effect_size).toFixed(2)} · ${rows[0].verdict}`;
+}
+driverSel.onchange = drawDriver; drawDriver();
+
+// watch list table
+let sortK='risk_score', sortAsc=false;
+function heat(v) {
+  const t=(v-0.3)/0.7, c=Math.round(225-90*Math.max(0,Math.min(1,t)));
+  return `background:rgb(225,${c},${c})`;
+}
+function drawTable() {
+  const rows=[...WATCH].sort((a,b)=>(a[sortK]>b[sortK]?1:-1)*(sortAsc?1:-1));
+  watchTable.tBodies[0].innerHTML = rows.map(r=>`<tr>
+    <td>${r.EmployeeNumber}</td><td>${r.Department}</td><td>${r.JobRole}</td><td>${r.OverTime}</td>
+    <td>$${r.MonthlyIncome.toLocaleString()}</td><td>${r.Age}</td><td>${r.YearsAtCompany} yrs</td>
+    <td><span class="score" style="${heat(r.risk_score)}">${r.risk_score.toFixed(2)}</span></td>
+    <td><span class="pill">${r.top_shap_driver}</span></td></tr>`).join('');
+}
+document.querySelectorAll('#watchTable th').forEach(th => th.onclick = () => {
+  const k=th.dataset.k; sortAsc = (sortK===k) ? !sortAsc : false; sortK=k; drawTable();
+});
+drawTable();
+</script>
+</body>
+</html>

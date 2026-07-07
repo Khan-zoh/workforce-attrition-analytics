@@ -2,7 +2,7 @@
 
 Diagnostic, predictive, and prescriptive analysis of employee attrition, packaged the way a consulting team would hand it to an HR director.
 
-**Status:** Analysis complete. Tableau Public dashboard: build guide ready, publish pending ([docs/tableau-build-guide.md](docs/tableau-build-guide.md)).
+**Status:** Complete. Interactive dashboard ships in the repo (below); a Tableau Public twin can be built in ~45 min from the committed extracts via [docs/tableau-build-guide.md](docs/tableau-build-guide.md).
 
 ## Headline Finding
 
@@ -18,9 +18,13 @@ Voluntary attrition is one of the most expensive line items a mid-size company c
 2. What predicts whether a given employee will leave?
 3. Where should the next dollar of retention spend go?
 
-## Live Dashboard
+## Dashboard
 
-*Publish pending — the two dashboard extracts (`outputs/attrition-risk-scores.csv`, `outputs/drivers-summary.csv`) and a click-by-click build guide ([docs/tableau-build-guide.md](docs/tableau-build-guide.md)) are ready; the Tableau Public link and preview screenshot land here after publishing.*
+**Included in the repo, zero setup:** open [`dashboard/attrition-dashboard.html`](dashboard/attrition-dashboard.html) in any browser (fully self-contained — no server, no dependencies; regenerate with `tools/make_html_dashboard.py`). KPI cards with an adjustable cost-per-leaver slider, a driver explorer limited to statistically meaningful drivers, and the top-decile watch list with per-employee risk patterns.
+
+![Dashboard preview](outputs/figures/dashboard-preview.png)
+
+**Tableau Public version:** the same two extracts (`outputs/attrition-risk-scores.csv`, `outputs/drivers-summary.csv`) feed a Tableau build; [docs/tableau-build-guide.md](docs/tableau-build-guide.md) is the click-by-click guide (~45 min, requires a free Tableau Public account — the one step an agent can't do for you). The public link will land here once published.
 
 ## Repo Structure
 

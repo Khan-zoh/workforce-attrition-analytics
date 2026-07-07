@@ -88,6 +88,15 @@ def test_driver_tests_battery():
     assert "MonthlyIncome" in meaningful
 
 
+def test_html_dashboard_is_current():
+    html = (ROOT / "dashboard" / "attrition-dashboard.html").read_text(encoding="utf-8")
+    assert "const LEAVERS=237" in html          # headline count baked in
+    assert "risk scores = logistic regression" in html
+    scores = pd.read_csv(ROOT / "outputs" / "attrition-risk-scores.csv")
+    n_watch = len(scores[(scores["Attrition"] == "No") & (scores["risk_decile"] >= 10)])
+    assert html.count('"top_shap_driver"') >= 1 and n_watch > 0
+
+
 def test_drivers_summary_schema():
     d = pd.read_csv(ROOT / "outputs" / "drivers-summary.csv")
     required = {"driver", "level", "n", "leavers", "attrition_rate",
