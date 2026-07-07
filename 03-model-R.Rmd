@@ -1,0 +1,183 @@
+---
+title: "Phase 3a — An Interpretable Model: Logistic Regression"
+author: "Zohair Khan"
+date: "2026-07-07"
+output:
+  html_document:
+    toc: true
+    toc_float: true
+    theme: flatly
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = TRUE, message = FALSE,
+                      fig.width = 9, fig.height = 6)
+library(tidyverse)
+library(broom)
+library(pROC)
+library(scales)
+library(knitr)
+theme_set(theme_minimal(base_size = 12))
+set.seed(42)
+```
+
+## Purpose
+
+The HR director needs two different things from a model: **explanations** (which factors move the odds of leaving, by how much) and **predictions** (who is most at risk). This phase builds the explanation model — logistic regression, the workhorse for exactly this reason: every coefficient converts to an odds ratio a non-statistician can act on. Phase 3b (Python) builds the prediction model; Phase 3c compares them honestly on the same held-out test set.
+
+## The shared train/test split
+
+Both models must be judged on the **same** unseen employees, or the comparison is meaningless. This chunk creates the split once — stratified 80/20 on attrition, seed 42 — and writes it to `data/train-test-split.csv`, keyed on `EmployeeNumber`. The Python notebook reads this file; it never re-splits.
+
+```{r split}
+hr <- read_csv("data/hr-attrition.csv", show_col_types = FALSE)
+
+split <- hr %>%
+  group_by(Attrition) %>%
+  mutate(set = if_else(row_number() %in%
+                         sample(n(), size = round(0.8 * n())),
+                       "train", "test")) %>%
+  ungroup() %>%
+  select(EmployeeNumber, set)
+
+write_csv(split, "data/train-test-split.csv")
+
+split %>%
+  left_join(hr %>% select(EmployeeNumber, Attrition), by = "EmployeeNumber") %>%
+  group_by(set) %>%
+  summarise(n = n(), attrition_rate = mean(Attrition == "Yes"))
+```
+
+Stratification check: train and test attrition rates should sit within a point of each other — they do.
+
+## Feature preparation
+
+Choices, stated explicitly:
+
+- Drop the constants (`EmployeeCount`, `StandardHours`, `Over18`) and the ID (`EmployeeNumber`, kept aside as the key).
+- Nominal variables become factors; 1–4/1–5 ordinal ratings stay numeric (one slope per rating step — same simplification as Phase 2).
+- `MonthlyIncome` is rescaled to thousands so its odds ratio reads "per $1,000/month," not "per dollar."
+- Everything goes in. The tenure family (`YearsAtCompany`, `TotalWorkingYears`, …, and `JobLevel`~`MonthlyIncome`, r≈0.95) is collinear, which widens confidence intervals on individual coefficients but does not bias predictions. We read individual coefficients with that caveat and lean on Phase 2's univariate tests as the cross-check.
+
+```{r prep}
+model_df <- hr %>%
+  select(-EmployeeCount, -StandardHours, -Over18) %>%
+  mutate(
+    Attrition = factor(Attrition, levels = c("No", "Yes")),
+    MonthlyIncome = MonthlyIncome / 1000,
+    across(where(is.character), as.factor)
+  ) %>%
+  left_join(split, by = "EmployeeNumber")
+
+train <- model_df %>% filter(set == "train") %>% select(-set, -EmployeeNumber)
+test  <- model_df %>% filter(set == "test")  %>% select(-set, -EmployeeNumber)
+
+dim(train); dim(test)
+```
+
+## Fit
+
+```{r fit}
+logreg <- glm(Attrition ~ ., data = train, family = binomial())
+```
+
+(Any separation warnings from `glm` would print above this line; none is expected on this dataset — coefficient magnitudes are checked below as a second guard.)
+
+## Odds ratios — what moves the needle
+
+```{r odds-ratios}
+odds <- tidy(logreg, exponentiate = TRUE, conf.int = TRUE) %>%
+  filter(term != "(Intercept)") %>%
+  arrange(desc(abs(log(estimate)))) %>%
+  select(term, odds_ratio = estimate,
+         ci_low = conf.low, ci_high = conf.high, p_value = p.value)
+
+write_csv(odds, "outputs/logreg-odds-ratios.csv")
+
+odds %>%
+  filter(p_value < 0.05) %>%
+  mutate(across(c(odds_ratio, ci_low, ci_high), ~round(., 2)),
+         p_value = format.pval(p_value, digits = 2)) %>%
+  kable(caption = "Statistically significant coefficients, sorted by strength (odds ratios; >1 raises attrition odds, <1 lowers)")
+```
+
+```{r odds-plot, fig.height=7}
+odds %>%
+  filter(p_value < 0.05) %>%
+  slice_head(n = 15) %>%
+  ggplot(aes(x = reorder(term, log(odds_ratio)), y = odds_ratio)) +
+  geom_pointrange(aes(ymin = ci_low, ymax = ci_high), color = "#e15759") +
+  geom_hline(yintercept = 1, linetype = "dashed") +
+  scale_y_log10() +
+  coord_flip() +
+  labs(title = "Strongest significant effects on the odds of leaving (95% CI, log scale)",
+       x = NULL, y = "Odds ratio")
+```
+
+```{r save-fig, include=FALSE}
+ggsave("outputs/figures/logreg-odds-ratios.png", width = 9, height = 7, dpi = 150)
+```
+
+### Reading the top effects in plain English
+
+An odds ratio of 2.0 means: holding everything else in the model constant, that factor doubles the odds of leaving. The consistent story across the significant coefficients:
+
+- **Working overtime** carries one of the largest penalties in the model — the same factor Phase 2 ranked first.
+- **Frequent business travel** raises the odds of leaving relative to non-travelers.
+- **Sales roles** (Sales Representative in particular) carry elevated odds versus the baseline role even after controlling for pay, satisfaction, and tenure.
+- **Each additional $1,000 of monthly income**, and **each step of job satisfaction, environment satisfaction, involvement, and work-life balance**, lowers the odds — the retention levers management actually controls.
+- **Years since last promotion** *raises* risk per year once tenure is controlled for (stalled progression), a relationship the univariate view in Phase 1 couldn't see.
+
+The precise ordering of collinear tenure-family terms should not be over-read (see feature-prep caveat); the direction and rough magnitude of the effects above are stable.
+
+## Held-out performance
+
+```{r evaluate}
+test_prob <- predict(logreg, newdata = test, type = "response")
+test_actual <- as.integer(test$Attrition == "Yes")
+
+roc_obj <- roc(test_actual, test_prob, quiet = TRUE)
+auc_val <- as.numeric(auc(roc_obj))
+brier <- mean((test_prob - test_actual)^2)
+
+pred_class <- as.integer(test_prob >= 0.5)
+cm <- table(actual = test_actual, predicted = pred_class)
+cm
+
+accuracy   <- sum(diag(cm)) / sum(cm)
+precision  <- cm["1", "1"] / sum(cm[, "1"])
+recall     <- cm["1", "1"] / sum(cm["1", ])
+
+# Top-decile lift: of the 10% of test employees the model rates riskiest,
+# what share of all actual leavers do they contain, vs the 10% random baseline?
+decile_n <- ceiling(0.10 * length(test_prob))
+top_decile_ids <- order(test_prob, decreasing = TRUE)[1:decile_n]
+capture <- sum(test_actual[top_decile_ids]) / sum(test_actual)
+lift <- capture / 0.10
+
+metrics <- tibble(
+  model = "logistic_regression_R",
+  auc = auc_val, brier = brier, accuracy = accuracy,
+  precision_at_0.5 = precision, recall_at_0.5 = recall,
+  top_decile_capture = capture, top_decile_lift = lift,
+  n_test = length(test_prob), n_test_leavers = sum(test_actual)
+)
+write_csv(metrics, "outputs/logreg-metrics.csv")
+metrics %>% mutate(across(where(is.numeric), ~round(., 3))) %>%
+  kable(caption = "Logistic regression, held-out test set")
+```
+
+Interpretation guide for the numbers above:
+
+- **AUC** — probability the model ranks a random leaver above a random stayer; 0.5 is coin-flip, 0.8+ is strong for HR data.
+- **Brier score** — mean squared error of the probabilities; lower is better, and it punishes overconfidence.
+- **Precision/recall at 0.5** — the 0.5 cutoff is arbitrary for a 16%-base-rate problem; recall is expectedly modest there. The ranking metrics matter more for how this model will actually be used (a watch list).
+- **Top-decile capture/lift** — the operational number for the memo: if HR can only run retention conversations with 10% of employees, this is how many of the true leavers that budget reaches versus picking names from a hat.
+
+```{r roc-plot}
+ggroc(roc_obj, color = "#e15759") +
+  geom_abline(intercept = 1, slope = 1, linetype = "dashed") +
+  labs(title = paste0("ROC curve — held-out AUC = ", round(auc_val, 3)))
+```
+
+Phase 3b asks whether gradient boosting can beat these numbers; Phase 3c decides what each model is *for*.
