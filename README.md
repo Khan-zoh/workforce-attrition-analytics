@@ -24,7 +24,9 @@ Voluntary attrition is one of the most expensive line items a mid-size company c
 
 ![Dashboard preview](outputs/figures/dashboard-preview.png)
 
-**Tableau Public version:** the same two extracts (`outputs/attrition-risk-scores.csv`, `outputs/drivers-summary.csv`) feed a Tableau build; [docs/tableau-build-guide.md](docs/tableau-build-guide.md) is the click-by-click guide (~45 min, requires a free Tableau Public account — the one step an agent can't do for you). The public link will land here once published.
+**Tableau Public version (live):** [public.tableau.com/app/profile/zohair.khan5352/viz/WorkforceAttritionAnalytics](https://public.tableau.com/app/profile/zohair.khan5352/viz/WorkforceAttritionAnalytics/Sheet1) — v1 published from the same `attrition-risk-scores.csv` extract (attrition rate by department, built entirely in Tableau Public web authoring). [docs/tableau-build-guide.md](docs/tableau-build-guide.md) documents the remaining views (driver explorer, watch list, KPI dashboard) to add to the published workbook.
+
+![Tableau Public v1](outputs/tableau-preview.png)
 
 ## Repo Structure
 
