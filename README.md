@@ -24,9 +24,9 @@ Voluntary attrition is one of the most expensive line items a mid-size company c
 
 ![Dashboard preview](outputs/figures/dashboard-preview.png)
 
-**Tableau Public version (live):** [public.tableau.com/app/profile/zohair.khan5352/viz/WorkforceAttritionAnalytics](https://public.tableau.com/app/profile/zohair.khan5352/viz/WorkforceAttritionAnalytics/Sheet1) — v1 published from the same `attrition-risk-scores.csv` extract (attrition rate by department, built entirely in Tableau Public web authoring). [docs/tableau-build-guide.md](docs/tableau-build-guide.md) documents the remaining views (driver explorer, watch list, KPI dashboard) to add to the published workbook.
+**Tableau Public version (live):** [public.tableau.com/app/profile/zohair.khan5352/viz/WorkforceAttritionAnalytics/Dashboard1](https://public.tableau.com/app/profile/zohair.khan5352/viz/WorkforceAttritionAnalytics/Dashboard1) — a three-view dashboard published from the same `attrition-risk-scores.csv` extract, built entirely in Tableau Public web authoring: attrition rate by department, the department × overtime interaction (overtime roughly triples attrition within every department), and the top-decile watch list (33 highest-risk current employees with per-person logistic risk scores and SHAP risk patterns, filtered via a `Watch List` calculated field). [docs/tableau-build-guide.md](docs/tableau-build-guide.md) documents further polish (labels/formatting, KPI BAN, dashboard actions).
 
-![Tableau Public v1](outputs/tableau-preview.png)
+![Tableau Public dashboard](outputs/tableau-preview.png)
 
 ## Repo Structure
 
